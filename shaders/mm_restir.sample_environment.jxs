@@ -1,0 +1,81 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="invV" type="mat4" state="VIEW_MATRIX" transform="INVERSE" />
+	<param name="norDepthTex" type="int" default="0" />
+	<param name="envTex" type="int" default="1" />
+	<param name="texcoord" type="vec2" state="TEXCOORD" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="background_enable" type="int" default="1" />
+	<param name="background_blur" type="float" default="0.0" />
+	<language name="glsl" version="1.5">
+		<bind param="farCorner" program="vp" />
+		<bind param="invV" program="vp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="envTex" program="fp" />
+		<bind param="texcoord" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="background_enable" program="fp" />
+		<bind param="background_blur" program="fp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec2 texcoord;
+
+out jit_PerVertex {
+	vec3 rayDir;
+	vec2 uv;
+	vec3 vDir;
+} jit_out;
+
+uniform mat4 invV, textureMatrix0;
+uniform vec3 farCorner;
+
+void main(void) {
+	gl_Position = vec4(texcoord*2 - 1, 0, 1);
+	jit_out.uv = (textureMatrix0 * vec4(texcoord, 0, 1)).xy;
+	jit_out.vDir = farCorner*vec3(gl_Position.xy, 1);
+	jit_out.rayDir = (invV * vec4(jit_out.vDir, 1)).xyz;
+
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	vec3 rayDir;
+	vec2 uv;
+	vec3 vDir;
+} jit_in;
+
+layout (location = 0) out vec4 outColor;
+
+uniform sampler2DRect norDepthTex;
+uniform samplerCube envTex;
+uniform int background_enable;
+uniform float background_blur;
+
+void main(void) {
+
+	vec4 norDepth = texelFetch(norDepthTex, ivec2(jit_in.uv));
+	if(norDepth.w != 1.0){
+		float cosine = max(0.0, dot( -normalize(jit_in.vDir), norDepth.xyz) );
+		float 	x = 1. - cosine;
+		float 	x2 = x*x;
+				x2 *= x2;
+				x *= x2;
+    	float F = x;
+		//float F = pow(1.0 - cosine, 5.0);
+		outColor = vec4(0,0,0,F);
+	} else {
+	  	outColor = background_enable == 1 ? vec4(textureLod(envTex, normalize(jit_in.rayDir), background_blur).rgb, 0.0) : vec4(0.0);
+	}
+}
+]]>
+</program>
+</language>
+</jittershader>

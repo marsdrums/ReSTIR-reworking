@@ -1,0 +1,63 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="norDepthTex" type="int" default="0" />
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+	<language name="glsl" version="1.5">
+		<bind param="norDepthTex" program="fp" />
+		<bind param="MVP" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="farCorner" program="vp" />
+		<bind param="farClip" program="fp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+uniform vec3 farCorner;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec3 dir;
+} jit_out;
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.uv = vec2(textureMatrix0*vec4(uv, 0., 1.));
+	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec3 dir;
+} jit_in;
+
+layout (location = 0) out vec4 outColor;
+
+uniform float farClip;
+uniform sampler2DRect norDepthTex;
+
+void main(void) {
+
+	float depth = texture(norDepthTex, ivec2(jit_in.uv)).w;
+	outColor = depth == 0.0 ? vec4(1) : vec4( normalize(jit_in.dir)*depth*farClip, 1);
+}
+]]>
+</program>
+</language>
+</jittershader>

@@ -1,0 +1,52 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="imgTex" type="int" default="0" />
+	<param name="modelViewProjectionMatrix" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="position" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<language name="glsl" version="1.5">
+		<bind param="imgTex" program="fp" />
+		<bind param="modelViewProjectionMatrix" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="position" program="vp" />
+		<bind param="uv" program="vp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 position;
+in vec2 uv;
+out jit_PerVertex {
+	vec2 uv;
+} jit_out;
+uniform mat4 modelViewProjectionMatrix;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = modelViewProjectionMatrix*vec4(position, 1.);
+	jit_out.uv = vec2(textureMatrix0*vec4(uv, 0., 1.));
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	vec2 uv;
+} jit_in;
+layout (location = 0) out vec4 outColor;
+
+uniform sampler2DRect imgTex;
+
+void main(void) {
+
+	vec3 color = texelFetch(imgTex, ivec2(jit_in.uv)).rgb;
+	outColor = vec4(jit_in.uv, length(color), 1.0);
+}
+]]>
+		</program>
+	</language>
+</jittershader>

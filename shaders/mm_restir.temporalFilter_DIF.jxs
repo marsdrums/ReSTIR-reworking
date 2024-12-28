@@ -1,0 +1,132 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="imgTex" type="int" default="0" />
+	<param name="velTex" type="int" default="1" />
+	<param name="accumTex" type="int" default="2" />
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="variance_clipping_gamma" type="float" default="2" />
+	<language name="glsl" version="1.5">
+		<bind param="imgTex" program="fp" />
+		<bind param="velTex" program="fp" />
+		<bind param="accumTex" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="MVP" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="variance_clipping_gamma" program="fp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+out jit_PerVertex {
+	smooth vec2 uv;
+} jit_out;
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.uv = vec2(textureMatrix0*vec4(uv, 0., 1.));
+}
+]]>
+
+</program>
+<program name="fp" type="fragment"  >
+
+<![CDATA[
+#version 330 core
+uniform sampler2DRect imgTex, velTex, accumTex;
+uniform vec2 texDim;
+uniform float variance_clipping_gamma;
+
+in jit_PerVertex {
+	smooth vec2 uv;
+} jit_in;
+
+struct curr{
+	vec3 col;
+	vec2 vel;
+	vec2 repUV;
+	float weight;
+};
+
+struct prev{
+	vec3 col;
+	vec3 colRef;
+};
+
+layout (location = 0) out vec4 outCol;
+
+curr read_current_textures(){
+	ivec2 iuv = ivec2(jit_in.uv);
+
+	curr c;
+	c.col = texelFetch(imgTex, iuv).rgb;
+	vec3 lookup = texelFetch(velTex, iuv).rgb;
+	//vec3 lookup = texelFetch(velTex, iuv).rgb;
+	c.vel = lookup.rg;
+	c.weight = lookup.b;
+	c.repUV = jit_in.uv - c.vel*texDim;
+
+	return c;
+}
+
+bool valid_reprojection(vec2 uv){
+
+	return(uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y);
+}
+
+float luma(vec3 x){ return dot(x, vec3(0.299, 0.587, 0.144)); }
+
+void main(void) {
+
+	curr c = read_current_textures();
+
+	if(valid_reprojection(c.repUV)){
+
+		//COLOR CLIPPING
+		ivec2 iuv = ivec2(jit_in.uv);
+		vec3 NearColor0 = texelFetch(imgTex, iuv + ivec2(1, 0)).rgb;
+		vec3 NearColor1 = texelFetch(imgTex, iuv + ivec2(0, 1)).rgb;
+		vec3 NearColor2 = texelFetch(imgTex, iuv + ivec2(-1, 0)).rgb;
+		vec3 NearColor3 = texelFetch(imgTex, iuv + ivec2(0, -1)).rgb;
+		
+		// Compute the two moments
+		vec3 M1 = c.col + NearColor0 + NearColor1 + NearColor2 + NearColor3;
+		vec3 M2 = c.col * c.col + NearColor0 * NearColor0 + NearColor1 * NearColor1 
+			+ NearColor2 * NearColor2 + NearColor3 * NearColor3;
+		
+		vec3 MU = M1 * 0.2;
+		vec3 Sigma = sqrt(M2 * 0.2 - MU * MU) * variance_clipping_gamma;
+		
+		vec3 BoxMin = MU - Sigma;
+		vec3 BoxMax = MU + Sigma;
+
+		prev p;
+		p.col = texture(accumTex, c.repUV).rgb;
+		p.col = clamp(p.col, BoxMin, BoxMax);
+
+		//inalColor = clamp(finalColor, BoxMin, BoxMax);
+
+		outCol.rgb = mix( p.col, c.col, c.weight );
+		//outCol.rgb = mix( p.col, c.col, 0.001 );
+	
+	} else {
+
+		outCol.rgb = c.col;
+	}
+
+	outCol.a = 1;
+}
+]]>
+</program>
+</language>
+</jittershader>

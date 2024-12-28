@@ -1,0 +1,104 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="imgTex" type="int" default="0" />
+	<param name="indTex" type="int" default="1" />
+	<param name="occTex" type="int" default="2" />
+	<param name="albTex" type="int" default="3" />
+	<param name="speTex" type="int" default="4" />
+	<param name="rouMetTex" type="int" default="5" />
+	<param name="bkgTex" type="int" default="6" />
+	<param name="modelViewProjectionMatrix" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="position" type="vec3" state="POSITION" />
+	<param name="texcoord" type="vec2" state="TEXCOORD" />
+	<language name="glsl" version="1.5">
+		<bind param="imgTex" program="fp" />
+		<bind param="indTex" program="fp" />
+		<bind param="occTex" program="fp" />
+		<bind param="albTex" program="fp" />
+		<bind param="speTex" program="fp" />
+		<bind param="rouMetTex" program="fp" />
+		<bind param="bkgTex" program="fp" />
+		<bind param="modelViewProjectionMatrix" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="position" program="vp" />
+		<bind param="texcoord" program="vp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 position;
+in vec2 texcoord;
+out jit_PerVertex {
+	vec2 texcoord;
+} jit_out;
+uniform mat4 modelViewProjectionMatrix;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = modelViewProjectionMatrix*vec4(position, 1.);
+	jit_out.texcoord = vec2(textureMatrix0*vec4(texcoord, 0., 1.));
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	vec2 texcoord;
+} jit_in;
+
+layout (location = 0) out vec4 outColor;
+layout (location = 1) out vec4 outFdbk;
+
+uniform sampler2DRect imgTex, indTex, occTex, albTex, speTex, rouMetTex, bkgTex;
+
+void main(void) {
+
+	ivec2 iuv = ivec2(jit_in.texcoord);
+	vec3 img = texelFetch(imgTex, iuv).rgb;
+	vec3 ind = texelFetch(indTex, iuv).rgb;
+	float occ = texelFetch(occTex, iuv).r;
+	vec3 alb = texelFetch(albTex, iuv).rgb;
+	vec3 spe = texelFetch(speTex, iuv).rgb;
+	vec2 rouMet = texelFetch(rouMetTex, iuv).xy;
+	vec4 lookup = texelFetch(bkgTex, iuv);
+	vec3 bkg = lookup.rgb;
+	float F = lookup.a;
+
+	vec3 res = img;
+	res += alb*occ*0.01; //add a touch of uniform ambient light
+	ind *= alb; //modulate indirect by albedo
+	res += ind; //add indirect
+
+	outFdbk.a = 1.0;
+	outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
+
+	vec3 	kS = vec3(F);					//k specular
+	vec3 	kD = vec3(1.0) - kS;	//k diffuse
+			kD *= 1.0 - rouMet.y;		//nullify k diffuse if metallic
+
+
+	//res *= 1 - rouMet.y;
+	//res *= 1 - F;
+
+	//float rouFallBack = clamp((rouMet.x - 0.4)/0.6, 0.0, 1.0);
+	//rouFallBack *= rouFallBack;
+	//rouFallBack *= rouFallBack;
+	//res += mix(spe, ind, rouFallBack); //mix between specular and indirect diffuse
+
+	res *= kD;
+	res += spe;
+
+	res += bkg; //add background environment
+
+	outColor = vec4(res, 1.0);
+	//outFdbk = outColor;
+	//outColor = vec4(ind, 1.0);
+}
+]]>
+</program>
+</language>
+</jittershader>

@@ -1,0 +1,565 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="colTex" type="int" default="0" filter="nearest" /> //w is free
+	<param name="norDepthTex" type="int" default="1" filter="nearest" />
+	<param name="depthsTex" type="int" default="2" filter="nearest" /> //z and w are free
+	<param name="posTex" type="int" default="3" filter="nearest" />
+	<param name="prev_reservoirTex" type="int" default="4" filter="nearest" />
+	<param name="prev_best_wposTex" type="int" default="5" filter="nearest" /> //w is free
+	<param name="albTex" type="int" default="6" filter="nearest" />
+	<param name="environmentMap" type="int" default="7" />
+	<param name="velTex" type="int" default="8" />
+	<param name="selectedSamplesTex" type="int" default="9" />
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="mapSize" type="vec2" state="TEXDIM7" />
+	<param name="selectedSamplesTexDim" type="vec2" state="TEXDIM9" />
+	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+	<param name="nearClip" type="float" state="NEAR_CLIP" />
+
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="MV" type="mat4" state="MODELVIEW_MATRIX" />
+	<param name="invV" type="mat4" state="VIEW_MATRIX" transform="INVERSE" />
+	<param name="V" type="mat4" state="VIEW_MATRIX" />
+	<param name="VP" type="mat4" state="VIEW_PROJECTION_MATRIX" transform="INVERSE" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="projmat" type="mat4" state="CAM_PROJECTION_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="frame" type="int" state="FRAME" />
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+	<language name="glsl" version="1.5">
+		<bind param="colTex" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="depthsTex" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="mapSize" program="fp" />
+		<bind param="posTex" program="fp" />
+		<bind param="prev_reservoirTex" program="fp" />
+		<bind param="prev_best_wposTex" program="fp" />
+		<bind param="albTex" program="fp" />
+		<bind param="environmentMap" program="fp" />
+		<bind param="selectedSamplesTex" program="fp" />
+		<bind param="selectedSamplesTexDim" program="fp" />
+		<bind param="velTex" program="fp" />
+		<bind param="prevMVP" program="fp" />
+		<bind param="farClip" program="fp" />
+		<bind param="farClip" program="vp" />
+		<bind param="nearClip" program="vp" />
+
+		<bind param="MVP" program="vp" />
+		<bind param="MVP" program="fp" />
+		<bind param="MV" program="fp" />
+		<bind param="invV" program="fp" />
+		<bind param="V" program="fp" />
+		<bind param="VP" program="fp" />
+		<bind param="projmat" program="fp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="textureMatrix0" program="fp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="frame" program="fp" />
+		<bind param="farCorner" program="vp" />
+		<bind param="eye" program="fp" />
+
+		<include source="c74.noise.funcs.glsl" program="fp" />
+		<include source="mm_restir.structures.temporal.DIF.glsl" program="fp" />
+		<include source="mm_restir.constants.glsl" program="fp" />
+		<include source="mm_restir.raytrace.glsl" program="fp" />
+
+<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec3 dir;
+	flat vec4 plane_near;
+	flat vec4 plane_far;
+	flat vec4 plane_left;
+	flat vec4 plane_right;
+	flat vec4 plane_top;
+	flat vec4 plane_bottom;
+} jit_out;
+
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+uniform vec3 farCorner;
+uniform float nearClip, farClip;
+
+
+vec4 computePlane(vec3 p1, vec3 p2, vec3 p3) {
+    vec3 normal = normalize(cross(p2 - p1, p3 - p1));
+    float D = -dot(normal, p1);
+    return vec4(normal, D);
+}
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
+	jit_out.uv = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+
+   // Compute frustum dimensions
+    float far_height 	= 2.0 * abs(farCorner.y);
+    float far_width 	= 2.0 * abs(farCorner.x);
+
+    float near_height 	= (nearClip / farClip) * far_height;
+    float near_width 	= (nearClip / farClip) * far_width;
+
+    // Compute frustum corners in view space
+    vec3 near_center 	= vec3(0.0, 0.0, -nearClip);
+    vec3 far_center 	= vec3(0.0, 0.0, -farClip);
+
+    vec3 far_top_right 		= farCorner;
+    vec3 far_top_left 		= vec3(-farCorner.x, farCorner.y, farCorner.z);
+    vec3 far_bottom_right 	= vec3(farCorner.x, -farCorner.y, farCorner.z);
+    vec3 far_bottom_left 	= vec3(-farCorner.x, -farCorner.y, farCorner.z);
+
+    vec3 near_top_right 	= vec3(near_width / 2.0, near_height / 2.0, -nearClip);
+    vec3 near_top_left 		= vec3(-near_width / 2.0, near_height / 2.0, -nearClip);
+    vec3 near_bottom_right 	= vec3(near_width / 2.0, -near_height / 2.0, -nearClip);
+    vec3 near_bottom_left 	= vec3(-near_width / 2.0, -near_height / 2.0, -nearClip);
+
+    // Define frustum planes
+    jit_out.plane_near 		= computePlane(near_top_left, near_top_right, near_bottom_right); // Near plane
+    jit_out.plane_far 		= computePlane(far_top_right, far_top_left, far_bottom_left); // Far plane
+    jit_out.plane_left 		= computePlane(near_top_left, far_top_left, far_bottom_left); // Left plane
+    jit_out.plane_right 	= computePlane(far_top_right, near_top_right, near_bottom_right); // Right plane
+    jit_out.plane_top 		= computePlane(near_top_left, near_top_right, far_top_right); // Top plane
+    jit_out.plane_bottom 	= computePlane(near_bottom_right, near_bottom_left, far_bottom_left); // Bottom plane
+
+}
+]]>
+</program>
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+#define search_radius 100
+
+layout (location = 0) out vec4 outReservoir;
+layout (location = 1) out vec4 outPhat;
+//layout (location = 2) out vec4 outTest;
+
+uint get_rng_seed(){
+	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
+}
+
+vec2 get_sample_uv(inout uint seed){
+
+	return vec2(RandomFloat01(seed), RandomFloat01(seed))*texDim;
+}
+
+vec2 get_sample_uv_from_selected(inout uint seed){
+
+	return vec2(RandomFloat01(seed), RandomFloat01(seed))*vec2(30,18); //*** Hard coded tex dim, but it must change!
+}
+/*
+vec2 cartesianToUv(vec3 cartesian) {
+    float theta = atan(cartesian.y, cartesian.x)/TWOPI; // azimuthal angle
+    float phi = acos(cartesian.z)/M_PI; // polar angle
+    return vec2(theta, phi);
+}
+*/
+vec3 get_canidate_dir(inout uint seed, in vec3 nor){
+
+	//generate random unit vector 
+	vec3 rand_dir = randomUnitVector3(seed);
+
+	//compute world space normal *** precompute it outside the loop!
+	vec3 wNor = (invV * vec4(nor, 0)).xyz;
+
+	//force the vectors into the hemisphere
+	rand_dir = dot(rand_dir, wNor) > 0.0 ? rand_dir : -rand_dir;
+
+	return rand_dir;
+}
+
+bool valid_uv(in vec2 uv){
+	return uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y;
+}
+
+int uv2index(in vec2 uv){
+	uv = floor(uv);
+	return int(uv.x + uv.y*texDim.x);
+}
+
+int uv2index_for_env(in vec2 uv){
+	//uv -= 0.5;
+	uv = floor(uv);
+	return -int(uv.x + uv.y*mapSize.x); //negate the index to distinguish it from viewport samples
+}
+
+vec2 index2uv(in int i){
+	return vec2( mod( float(i), texDim.x ), floor( float(i) / texDim.x ) )+0.5;
+}
+
+vec2 index2uv_for_env(in int i){
+	return vec2( mod( float(-i), mapSize.x ), floor( float(-i) / mapSize.x ) )+0.5;
+}
+
+float luminance(vec3 x){
+	//return length(x);
+	//return dot(x, vec3(0.299, 0.587, 0.114));
+	return length(x);
+}
+
+sample get_sample_pos_col(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	ivec2 iuv = ivec2(uv);
+	vec4 lookup0 = texelFetch(colTex, iuv);
+	vec4 lookup3 = texelFetch(posTex, iuv);
+
+	s.col = lookup0.rgb;
+	s.pos = lookup3.xyz;
+	return s;
+}
+
+sample get_environment_sample(in vec3 candidate_dir){
+	sample s;
+	s.col = textureLod(environmentMap, candidate_dir, 1).rgb;
+	s.nor = (V * vec4(candidate_dir, 0.0)).xyz;
+	//s.pos = s.nor;
+	return s;
+}
+
+sample get_sample(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	ivec2 iuv = ivec2(uv);
+	vec4 lookup0 = texelFetch(colTex, iuv);
+	vec4 lookup1 = texelFetch(norDepthTex, iuv);
+	//vec4 lookup2 = texelFetch(depthLayersTex, iuv);
+	vec4 lookup3 = texelFetch(posTex, iuv);
+	vec4 lookup4 = texelFetch(albTex, iuv);
+	s.col = lookup0.rgb;
+	s.nor = lookup1.xyz;
+	s.vel = texelFetch(velTex, iuv).rg;
+	s.pos = lookup3.xyz;
+	s.depth = lookup1.w;
+	s.index = index;
+	s.uv = uv;
+	s.alb = lookup4.rgb;
+	s.id = lookup4.w;
+	return s;
+}
+
+
+vec3 get_radiance(in sample this_s, in sample test_s){
+
+	vec3 diff = test_s.pos - this_s.pos;
+	vec3 dir = normalize(diff);
+	float lambert = max(0.0, dot(this_s.nor, dir));
+	float PDF = 1 / (2*M_PI);
+	return this_s.alb * lambert * test_s.col / PDF;										
+}
+
+vec3 get_radiance_for_env(in sample this_s, in sample test_s){
+
+	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
+	float PDF = 1 / (2*M_PI);
+	return this_s.alb * lambert * test_s.col / PDF;							
+}
+
+vec4 updateReservoir(vec4 reservoir, float lightToSample, float weight, float c, uint seed, in vec3 candidate_dir, out vec3 best_dir)
+{
+
+	// Algorithm 2 of ReSTIR paper
+	reservoir.x += weight; // r.w_sum
+	reservoir.z += c; // r.M
+	if (RandomFloat01(seed) < weight / reservoir.x) {
+
+		if(lightToSample >= 0){ //If the sample comes from the viewport
+			reservoir.y = lightToSample; // r.y
+		} 		
+		else{ //If the sample comes from the environment map
+			reservoir.y = -1;
+			best_dir = candidate_dir;
+		}
+	}	
+	return reservoir;
+}
+
+bool background(in sample this_s){
+	return this_s.pos.x == 1.0 && this_s.pos.y == 1.0 && this_s.pos.z == 1.0;
+}
+
+bool get_exit_distance_from_frustum(in vec3 ro, in vec3 rd, in vec4 plane, out float t){
+
+  // Calculate the denominator of the intersection formula
+  float denom = dot(plane.xyz, rd);
+
+  if (abs(denom) > 1e-6) {  // Avoid division by zero
+    // Calculate the intersection parameter t
+    t = -(dot(plane.xyz, ro) + plane.w) / denom;
+
+    if (t >= 0.0) {  // Check if the intersection is in the direction of the ray
+        return true;
+    } else {
+      return false;
+    }
+  } 
+
+  return false;  // Ray is parallel to the plane
+}
+
+
+vec2 pos2uv(in vec3 p){
+
+	vec4 projP = projmat * vec4(p, 1);
+	projP.xy = (projP.xy/projP.w) * 0.5 + 0.5;
+	return floor( ( textureMatrix0 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
+}
+
+/*
+bool visible_env(in sample this_s, in sample test_s, inout uint seed){
+
+	float t = 999999;
+	float test_t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_near, test_t) ? 	min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_far, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_left, test_t) ? 	min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_right, test_t) ? 	min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_top, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, test_s.nor, jit_in.plane_bottom, test_t) ? 	min(t, test_t) : t;
+
+	vec3 end_pos = this_s.pos + test_s.nor*t; 
+	float end_depth = end_pos.z;//length(end_pos);
+	vec2 end_uv = pos2uv(end_pos);
+
+	float num_iterations = length(this_s.uv - end_uv);
+	float step = 200 / num_iterations;
+	float start = step*0.5;//0;//step * (RandomFloat01(seed) + 0.5);
+
+	for(float i = start; i < 1; i += step){ //make a better tracing
+		float e = i;//i*i;
+		vec2 test_uv = mix(this_s.uv, end_uv, vec2(e));
+		if(test_uv.x < 0 || test_uv.y < 0 || test_uv.x >= texDim.x || test_uv.y >= texDim.y) return true;
+		float expected_depth = (this_s.pos.z * end_depth) / mix(end_depth, this_s.pos.z, e);
+		vec4 sampled_depth = texelFetch(depthLayersTex, ivec2(test_uv));
+	    if ( 	(sampled_depth.r > expected_depth && expected_depth > sampled_depth.g) || 
+	    		(sampled_depth.b > expected_depth && expected_depth > sampled_depth.a) ){
+	    	return false;
+	    }
+	}
+	return true;
+}
+*/
+bool valid_reprojection(in sample this_s, in vec2 uv){
+
+	if(!valid_uv(uv)) return false;
+	//vec2 prev_vel = texture(depthLayersTex, uv).ba;
+	//float vel_diff = luminance(this_s.vel - prev_vel);
+	//float weight = clamp( (vel_diff - 0.001)*1000, 0.0, 1.0 );
+	//if(weight > 0.1) return false;
+	return true;
+}
+
+
+vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir){
+
+    vec4 reservoir = vec4(0); //curr reservoir
+
+	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
+
+	int M = 15;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
+	int J = 30;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
+	int K = 15;//20; //num of samples from selected (brightest) pixels
+
+	int sample_index;
+	vec2 sample_uv;
+	vec3 candidate_dir;
+
+	if(background(this_s)) return vec4(0.0);
+
+	//initial selection of 1 sample of M
+	for (int i = M; i > 0; i--)
+	{
+		sample_uv = get_sample_uv(seed);
+	    sample_index = int(uv2index(sample_uv));
+	    sample test_s = get_sample_pos_col(sample_index);
+	    if(background(test_s)) continue;
+
+		p_hat = luminance( get_radiance(this_s, test_s) );
+	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
+	}
+
+	//initial selection of 1 sample of M
+	for (int i = K; i > 0; i--)
+	{
+		sample_uv = get_sample_uv_from_selected(seed);
+		vec2 selectedUV = texelFetch(selectedSamplesTex, ivec2(sample_uv)).xy;
+	    sample_index = int(uv2index(selectedUV));
+	    sample test_s = get_sample_pos_col(sample_index);
+	    if(background(test_s)) continue;
+
+		p_hat = luminance( get_radiance(this_s, test_s) );
+	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
+	}
+
+	//sample the environment map
+	for (int k = J; k > 0; k--)
+	{
+		candidate_dir = get_canidate_dir(seed, this_s.nor);
+	  	sample test_s = get_environment_sample(candidate_dir);
+
+		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
+	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
+	}
+
+
+	// Validate the reservoir
+
+	if(reservoir.y >= 0){ //if it's a sample from the viewport
+
+		sample test_s = get_sample(int(reservoir.y));
+		p_hat = luminance( get_radiance(this_s, test_s) );
+		if(!shadowRay(this_s, test_s, seed)){
+			p_hat = 0.0;
+		}
+
+	} else { //if it's a sample from the environment map
+
+		sample test_s = get_environment_sample(best_dir);
+		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
+		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+			p_hat = 0.0;
+		}
+	}
+
+	reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+	return reservoir;
+}
+
+
+void main(void) {
+
+	uint seed = get_rng_seed();
+	sample this_s = get_sample(uv2index(jit_in.uv));
+	if(this_s.depth == 1){
+		outReservoir = vec4(0.0);
+		outPhat = vec4(0.0);
+		return;
+	}
+
+	sample test_s;
+
+	float p_hat;
+	vec3 best_dir;
+
+	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir);		
+
+
+	//TEMPORAL REUSE//____________________________________________________________
+
+	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
+	//reprojected_uv = ivec2(this_s.uv);
+
+	if(valid_reprojection(this_s, vec2(reprojected_uv))){
+
+		vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
+		vec4 temporal_reservoir = vec4(0);
+		vec3 dummy_dir;
+
+		// combine current reservoir
+			temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+		
+		// combine previous reservoir
+		if(prev_reservoir.y >= 0){
+
+			vec4 lookup_prev_pos_id = texelFetch(prev_best_wposTex, reprojected_uv);
+			vec4 prev_best_wpos = projmat * vec4( (V * vec4(lookup_prev_pos_id.xyz, 1)).xyz, 1);
+			prev_best_wpos.xy = (prev_best_wpos.xy/prev_best_wpos.w) * 0.5 + 0.5;
+			vec2 prev_best_wpos_uv = floor((textureMatrix0 * vec4(prev_best_wpos.xy,1,1)).xy) + 0.5;// * texDim;
+
+			if(valid_uv(prev_best_wpos_uv)){
+
+				prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
+				test_s = get_sample(int(prev_reservoir.y));
+
+
+				p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
+				if(background(test_s)) p_hat = 0.0;
+
+				//vec2 prev_vel = texture(depthLayersTex, vec2(reprojected_uv)).ba;
+				//float vel_diff = length(this_s.vel - prev_vel);
+				//float weight = clamp( 1 - (vel_diff - 0.001)*1000, 0.0, 1.0 );
+
+				prev_reservoir.z =  min(20*reservoir.z, prev_reservoir.z);
+				temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, dummy_dir, dummy_dir);
+			}
+
+		} else {
+
+			vec3 prev_best_dir = texelFetch(prev_best_wposTex, reprojected_uv).xyz;
+
+			//prev_reservoir.y = float(uv2index_for_env(prev_best_wpos_uv));
+			test_s = get_environment_sample(prev_best_dir);
+
+			p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
+			if(background(test_s)) p_hat = 0.0;
+
+			//vec2 prev_vel = texture(depthLayersTex, vec2(reprojected_uv)).ba;
+			//float vel_diff = length(this_s.vel - prev_vel);
+			//float weight = clamp( 1 - (vel_diff - 0.001)*1000, 0.0, 1.0 );
+
+			prev_reservoir.z = min(20*reservoir.z, prev_reservoir.z);
+			temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
+
+		}
+
+		temporal_reservoir.z = reservoir.z + prev_reservoir.z;
+		
+		//if(temporal_reservoir.y >= 0){
+		//	test_s = get_sample(int(temporal_reservoir.y));
+		//	p_hat = length( get_radiance(this_s, test_s) );			
+		//} else {
+		//	test_s = get_sample_dir_col_for_env_jittered(int(temporal_reservoir.y), seed);
+		//	p_hat = length( get_radiance_for_env(this_s, test_s) );
+		//		
+		//}
+		//
+		//temporal_reservoir.w = (1 / max(p_hat, 0.0001)) * (temporal_reservoir.x / max(temporal_reservoir.z, 0.0001));		
+		reservoir = temporal_reservoir;	
+		
+	}
+
+	//___________________________________________________________________________________________________________________________________________________________
+
+
+	if(reservoir.y >= 0){ //if the sample is from the viewport
+
+		test_s = get_sample(int(reservoir.y));
+
+		if(!shadowRay(this_s, test_s, seed)){
+			reservoir.w = 0.0;
+		} else {
+			float p_hat = luminance(get_radiance(this_s, test_s));// * (this_s.depth + 1);
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		}
+
+	} else { //if the sample is from the environment map
+
+		test_s = get_environment_sample(best_dir);
+
+		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+			reservoir.w = 0.0;
+		} else {
+			p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		}
+	}
+
+	outReservoir = reservoir;
+	outPhat = vec4(p_hat, best_dir);
+}
+]]>
+</program>
+</language>
+</jittershader>

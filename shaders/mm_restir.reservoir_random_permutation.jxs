@@ -1,0 +1,88 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="reservoirTex" type="int" default="0" />
+	<param name="tex1" type="int" default="1" />
+	<param name="norDepthTex" type="int" default="2" />
+	//<param name="permTex" type="int" default="3" />
+	//<texture file="permutations.png" type="float16" unit="3" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>	
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="frame" type="int" state="FRAME" />
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="width" type="float" default="3" />
+	<language name="glsl" version="1.5">
+		<bind param="reservoirTex" program="fp" />
+		<bind param="tex1" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		//<bind param="permTex" program="fp" />
+		<bind param="MVP" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="frame" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="width" program="fp" />
+
+		<include source="c74.noise.funcs.glsl" program="fp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+} jit_out;
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.uv = vec2(textureMatrix0*vec4(uv, 0., 1.));
+}
+]]>
+
+</program>
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	smooth vec2 uv;
+} jit_in;
+layout (location = 0) out vec4 outColor0;
+layout (location = 1) out vec4 outColor1;
+
+uniform sampler2DRect reservoirTex, tex1, norDepthTex;//, permTex;
+uniform int frame;
+uniform vec2 texDim;
+uniform float width;
+
+void main(void) {
+
+
+	vec2 tile = 1 - mod(floor(jit_in.uv)+float(frame), vec2(2));
+	tile = tile*2 - 1;
+
+	ivec2 permuted_uv = ivec2(jit_in.uv + tile*width);
+
+	vec4 this_nor_depth = texelFetch(norDepthTex, ivec2(jit_in.uv));
+	vec4 to_perm_nor_depth = texelFetch(norDepthTex, permuted_uv);
+
+	permuted_uv = 	dot(this_nor_depth.xyz, to_perm_nor_depth.xyz) > 0.96 && 
+					to_perm_nor_depth.w != 1 &&
+					this_nor_depth.w != 1 ?
+					permuted_uv : ivec2(jit_in.uv);
+
+	outColor0 = texelFetch(reservoirTex, permuted_uv);
+	outColor1 = texelFetch(tex1, permuted_uv);		
+
+
+}
+]]>
+</program>
+	</language>
+</jittershader>

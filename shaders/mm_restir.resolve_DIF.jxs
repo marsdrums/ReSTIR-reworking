@@ -1,0 +1,442 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="colTex" type="int" default="0" filter="nearest" />
+	<param name="reservoirTex" type="int" default="1" filter="nearest" />
+	<param name="bestDirTex" type="int" default="2" filter="nearest" />
+	<param name="norDepthTex" type="int" default="3" filter="nearest" />
+	<param name="depthsTex" type="int" default="4" filter="nearest" />
+	<param name="posTex" type="int" default="5" filter="nearest" />
+	<param name="albTex" type="int" default="6" filter="nearest" />	
+	<param name="environmentMap" type="int" default="7" />
+	<param name="occTex" type="int" default="8" />
+	//<param name="velTex" type="int" default="9" />
+	<param name="texDim" type="vec2" state="TEXDIM1" />
+	<param name="mapSize" type="vec2" state="TEXDIM7" />
+	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="MV" type="mat4" state="MODELVIEW_MATRIX" />
+	<param name="invV" type="mat4" state="VIEW_MATRIX" transform="INVERSE" />
+	<param name="V" type="mat4" state="VIEW_MATRIX" />
+	<param name="VP" type="mat4" state="VIEW_PROJECTION_MATRIX" transform="INVERSE" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="textureMatrix1" type="mat4" state="TEXTURE1_MATRIX" />
+	<param name="projmat" type="mat4" state="CAM_PROJECTION_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="frame" type="int" state="FRAME" />
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+	<language name="glsl" version="1.5">
+		<bind param="colTex" program="fp" />
+		<bind param="reservoirTex" program="fp" />
+		<bind param="bestDirTex" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="depthsTex" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="mapSize" program="fp" />
+		<bind param="posTex" program="fp" />
+		<bind param="albTex" program="fp" />
+		<bind param="environmentMap" program="fp" />
+		<bind param="occTex" program="fp" />
+		//<bind param="velTex" program="fp" />
+		<bind param="prevMVP" program="fp" />
+		<bind param="farClip" program="fp" />
+
+		<bind param="MVP" program="vp" />
+		<bind param="MVP" program="fp" />
+		<bind param="MV" program="fp" />
+		<bind param="invV" program="fp" />
+		<bind param="V" program="fp" />
+		<bind param="VP" program="fp" />
+		<bind param="projmat" program="fp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="textureMatrix1" program="vp" />
+		<bind param="textureMatrix1" program="fp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="frame" program="fp" />
+		<bind param="farCorner" program="vp" />
+		<bind param="eye" program="fp" />
+
+		<include source="c74.noise.funcs.glsl" program="fp" />
+		<include source="mm_restir.structures.resolve.DIF.glsl" program="fp" />
+		<include source="mm_restir.constants.glsl" program="fp" />
+		<include source="mm_restir.raytrace.glsl" program="fp" />
+
+<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec2 uvFull;
+	smooth vec3 dir;
+} jit_out;
+
+uniform mat4 MVP;
+uniform mat4 textureMatrix0, textureMatrix1;
+uniform vec3 farCorner;
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
+	jit_out.uv = vec2(textureMatrix1*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+	jit_out.uvFull = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+}
+]]>
+</program>
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+#define search_radius 100
+
+layout (location = 0) out vec4 outColor;
+
+uint get_rng_seed(){
+	return uint(jit_in.uv.x*3713) + uint(jit_in.uv.y*2882) + uint(frame*372);
+}
+
+vec2 get_sample_uv(inout uint seed, in float radius, in int iteration){
+
+	float angle = RandomFloat01(seed)*M_TAU;
+	float ra = sqrt(RandomFloat01(seed))*radius;
+	return vec2(cos(angle), sin(angle))*ra + jit_in.uv;
+}
+
+bool valid_uv(in vec2 uv){
+	return uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y;
+}
+
+void validate_uv(inout vec2 uv){
+	uv.x = (uv.x < 0 || uv.x >= texDim.x) ? jit_in.uv.x + -1*(uv.x - jit_in.uv.x) : uv.x;
+	uv.y = (uv.y < 0 || uv.y >= texDim.y) ? jit_in.uv.y + -1*(uv.y - jit_in.uv.y) : uv.y;
+
+}
+
+void wrap(inout vec2 uv){
+    uv = vec2(	mod(mod(uv.x, texDim.x) + texDim.x, texDim.x),
+    			mod(mod(uv.y, texDim.y) + texDim.y, texDim.y));
+
+}
+
+int uv2index(in vec2 uv){
+	uv = floor(uv);
+	return int(uv.x + uv.y*texDim.x);
+}
+
+vec2 index2uv(in int i){
+	return vec2( mod( float(i), texDim.x ), floor( float(i) / texDim.x ) )+0.5;
+}
+
+vec2 index2uv_for_env(in int i){
+	return vec2( mod( float(-i), mapSize.x ), floor( float(-i) / mapSize.x ) )+0.5;
+}
+
+float luminance(vec3 x){
+	//return length(x);
+	return dot(x, vec3(0.299, 0.587, 0.114));
+}
+
+vec3 uv2dir(in vec2 uv){
+
+	uv /= mapSize;
+
+    // Convert the normalized UV coordinates to the range [-1, 1]
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+
+    // Calculate the longitude and latitude angles
+    float longitude = u * M_PI;          // Longitude (-π to π)
+    float latitude = v * M_PI * 0.5;     // Latitude (-π/2 to π/2)
+
+    // Convert spherical coordinates to Cartesian coordinates
+    float x = cos(latitude) * sin(longitude);
+    float y = sin(latitude);
+    float z = cos(latitude) * cos(longitude);
+
+    vec3 dir = vec3(x, y, z);
+    return (V * vec4(dir, 0)).xyz;
+}
+
+sample get_sample(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	//ivec2 iuv = ivec2(uv);
+	ivec2 iuvFull = ivec2(uv*2);
+	//vec4 lookup0 = texelFetch(colTex, iuvFull);
+	vec4 lookup1 = texelFetch(norDepthTex, iuvFull);
+	//vec4 lookup2 = texelFetch(velTex, iuvFull);
+	vec4 lookup3 = texelFetch(posTex, iuvFull);
+	//vec4 lookup4 = texelFetch(albTex, iuvFull);
+	//s.col = lookup0.rgb;
+	s.nor = lookup1.xyz;
+	//s.vel = lookup2.xy;
+	s.pos = lookup3.xyz;
+	s.depth = lookup1.w;
+	//s.index = index;
+	s.uv = uv;
+	//s.alb = lookup4.rgb;
+	//s.id = lookup4.w;
+	return s;
+}
+
+sample get_sample_pos_col(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	ivec2 iuv = ivec2(uv);
+	ivec2 iuvFull = ivec2(uv*2);
+	vec4 lookup0 = texelFetch(colTex, iuvFull);
+	vec4 lookup3 = texelFetch(posTex, iuvFull);
+
+	s.col = lookup0.rgb;
+	s.pos = lookup3.xyz;
+	return s;
+}
+/*
+sample get_sample_dir_col_for_env_jittered(int index, inout uint seed){
+
+	sample s;
+	s.uv = index2uv_for_env(index);
+	ivec2 iuv = ivec2(s.uv);
+	vec2 jitter_uv = s.uv;// + 2*vec2(RandomFloat01(seed)-0.5, RandomFloat01(seed)-0.5);
+	s.col = texture(environmentMap, jitter_uv).rgb;
+	s.nor = uv2dir(jitter_uv);
+	s.pos = s.nor; //use the position variable to pass the direction for reprojection
+	return s;
+}
+*/
+sample get_environment_sample(in vec3 candidate_dir, inout uint seed){
+	sample s;
+	s.col = textureLod(environmentMap, candidate_dir, 1).rgb;
+	s.nor = (V * vec4(candidate_dir, 0.0)).xyz;
+	//s.pos = s.nor;
+	return s;
+}
+
+vec3 get_radiance(in sample this_s, in sample test_s){
+
+	vec3 diff = test_s.pos - this_s.pos;
+	vec3 dir = normalize(diff);//diff / dist;
+	float lambert = max(0.0, dot(this_s.nor, dir));
+	float PDF = 1 / (M_TAU);
+	return /*this_s.alb * */lambert * test_s.col / PDF;
+}
+
+vec3 get_radiance_for_env(in sample this_s, in sample test_s){
+
+	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
+	float PDF = 1 / (M_TAU);
+	return /*this_s.alb * */lambert * test_s.col / PDF;							
+}
+/*
+bool visible(in sample this_s, in sample test_s, inout uint seed){
+	//return true;
+	float num_iterations = 6;
+	float step = 0.1;//1 / num_iterations;
+	float start = step * (1 + RandomFloat01(seed) - 0.5);
+	for(float i = start; i < 1; i += step){ //make a better tracing
+		vec2 test_uv = mix(this_s.uv, test_s.uv, vec2(i*i));
+		float expected_depth = (this_s.depth * test_s.depth) / mix(test_s.depth, this_s.depth, i*i);
+		float sampled_depth = texelFetch(norDepthTex, ivec2(test_uv)).w;
+		if(sampled_depth < (expected_depth - 0.01) ) return false;
+	}
+	return true;
+}
+*/
+
+bool visible(in sample this_s, in sample test_s, inout uint seed){
+
+	return true;
+	float num_iterations = length(test_s.uv - this_s.uv);
+	num_iterations /= 50;
+	float step = 1 / num_iterations;
+	float start = step * (1 + RandomFloat01(seed) - 0.5);
+	for(float i = start; i < 1; i += step){ //make a better tracing
+		vec2 test_uv = mix(this_s.uv, test_s.uv, i);
+		float expected_depth = (this_s.pos.z * test_s.pos.z) / mix(test_s.pos.z, this_s.pos.z, i);
+		vec4 depths = texelFetch(depthsTex, ivec2(test_uv*2));
+		if ( 	(depths.r > expected_depth && expected_depth > depths.g ) || 
+    			(depths.b > expected_depth && expected_depth > depths.a ) ){
+			return false;
+		}
+	}
+	return true;
+}
+
+vec2 pos2uv(in vec3 p){
+
+	vec4 projP = projmat * vec4(p, 1);
+	projP.xy = (projP.xy/projP.w) * 0.5 + 0.5;
+	return floor( ( textureMatrix1 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
+
+}
+
+/*
+bool visible_env(in sample this_s, in sample test_s, inout uint seed){
+
+	return true;
+	float num_iterations = 50;
+	float step = 1 / num_iterations;
+	float start = step * (RandomFloat01(seed) + 0.5);
+	vec3 end_pos = this_s.pos + test_s.nor*10; 
+	float end_depth = end_pos.z;//length(end_pos);
+	vec2 end_uv = pos2uv(end_pos);
+	for(float i = start; i < 1; i += step){ //make a better tracing
+		vec2 test_uv = mix(this_s.uv, end_uv, vec2(i));
+		if(test_uv.x < 0 || test_uv.y < 0 || test_uv.x >= texDim.x || test_uv.y >= texDim.y) return true;
+		float expected_depth = (this_s.pos.z * end_depth) / mix(end_depth, this_s.pos.z, i);
+		vec4 depths = texelFetch(depthsTex, ivec2(test_uv*2));
+		if ( 	(depths.r > expected_depth && expected_depth > depths.g ) || 
+    			(depths.b > expected_depth && expected_depth > depths.a ) ){
+			return false;
+		}
+	}
+	return true;
+
+
+}
+*/
+
+float saturate(in float x){ return clamp(x, 0, 1); }
+
+void main(void) {
+
+	sample this_s = get_sample(uv2index(floor(jit_in.uv)));
+	if(this_s.depth == 1){
+		outColor = vec4(0.0);
+		return;
+	}
+
+	uint seed = get_rng_seed();
+
+	float a = 1./(1. + this_s.nor.z);
+    float b = -this_s.nor.x*this_s.nor.y*a;
+    vec3 f = vec3(1. - this_s.nor.x*this_s.nor.x*a, b, -this_s.nor.x);
+   	vec3 r = vec3(b, 1. - this_s.nor.y*this_s.nor.y*a , -this_s.nor.y);
+
+   	mat3 TBN = mat3(r, f, this_s.nor);
+
+	sample test_s;
+
+	outColor = vec4(0,0,0,1);
+
+	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
+	//float radius = mix(0.3, 40, occlusion);//mix(4, 4, this_s.depth);
+	float radius = mix(0., 40., max(0.0, occlusion*occlusion*2 - 0.5));
+	int NUM_SAMPLES = 4;//int( mix(1, 3, occlusion));//int(mix(4, 4, occlusion));//int(mix(4, 4, min(1.0, reservoir.z*0.001)));
+	float weight = 0.001;
+
+
+	for(int i = NUM_SAMPLES - 1; i >= 0; i--){
+
+		ivec2 randUV;
+		ivec2 randUVfull;
+
+		float rand_radius = sqrt(RandomFloat01(seed));///this_s.depth;
+		float rand_angle = RandomFloat01(seed)*M_TAU;//
+		vec3 disk = vec3(cos(rand_angle), sin(rand_angle), 0)*rand_radius*0.01*radius*occlusion;
+		disk = TBN * disk;
+		disk += this_s.pos;
+		vec4 proj_disk = projmat * vec4(disk, 1);
+		proj_disk.xy /= proj_disk.w;
+		vec2 proj_disk_uv = vec2(textureMatrix1 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
+		randUV = ivec2(proj_disk_uv);
+		randUVfull = ivec2(proj_disk_uv*2);
+
+		float sample_depth = texelFetch(norDepthTex, randUVfull).w; 
+		bool background = sample_depth == 0.0 || sample_depth == 1.0;
+		
+		if(	randUV.x < 0 || 
+			randUV.y < 0 || 
+			randUV.x >= texDim.x || 
+			randUV.y >= texDim.y || 
+			background){
+			continue;
+		}
+			
+		vec4 reservoir = texelFetch(reservoirTex, randUV);
+		float angle_diff = max(0.0, dot(this_s.nor, texelFetch(norDepthTex, randUVfull).xyz));
+		float sample_occ = texelFetch(occTex, randUVfull).r;
+
+		if(reservoir.y >= 0){ //if the sample is from the viewport
+
+			test_s = get_sample_pos_col(int(reservoir.y));
+
+			if(visible(this_s, test_s, seed)){
+				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
+				vec3 radiance = get_radiance(this_s, test_s);
+				float p_hat = luminance(radiance) * (this_s.depth + 1);
+				if(p_hat <= 0)continue;
+				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+				radiance *= reservoir.w;
+				outColor.rgb += radiance*this_weight;
+				weight += this_weight;
+			}		
+
+		} else {
+
+			//*** read best dir
+			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
+			test_s = get_environment_sample(best_dir, seed);
+
+			if(shadowRayForEnv(this_s, test_s, seed, textureMatrix1)){
+
+				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
+				vec3 radiance = get_radiance_for_env(this_s, test_s);
+				float p_hat = luminance(radiance) * (this_s.depth + 1);
+				if(p_hat <= 0)continue;
+				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+				radiance *= reservoir.w;
+				outColor.rgb += radiance*this_weight;
+				weight += this_weight;
+			}
+		}
+	}
+
+	//if(weight < 0.3){
+
+		vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
+
+		if(reservoir.y >= 0){ //if the sample is from the viewport
+
+			test_s = get_sample_pos_col(int(reservoir.y));
+
+			if(visible(this_s, test_s, seed)){
+				vec3 radiance = get_radiance(this_s, test_s);
+				float p_hat = luminance(radiance);
+				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+				radiance *= reservoir.w;
+				outColor.rgb += radiance;
+				weight += 1;
+			}		
+
+		} else {
+
+			vec3 best_dir = texelFetch(bestDirTex, ivec2(jit_in.uv)).xyz;
+			test_s = get_environment_sample(best_dir, seed);
+
+			if(shadowRayForEnv(this_s, test_s, seed, textureMatrix1)){
+				vec3 radiance = get_radiance_for_env(this_s, test_s);
+				float p_hat = luminance(radiance);
+				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+				radiance *= reservoir.w;
+				outColor.rgb += radiance;
+				weight += 1;
+			}
+		}
+	//}
+
+	outColor.rgb /= weight;
+
+}
+]]>
+</program>
+</language>
+</jittershader>

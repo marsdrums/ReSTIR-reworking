@@ -1,0 +1,73 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="velTex" type="int" default="0" />
+	<param name="norDepthTex" type="int" default="1" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<language name="glsl" version="1.5">
+		<bind param="velTex" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="modelViewProjectionMatrix" program="vp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="uv" program="vp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec2 uv;
+out jit_PerVertex {
+	vec2 uv;
+} jit_out;
+
+uniform mat4 modelViewProjectionMatrix;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = vec4(uv*2 - 1, 0, 1);
+	jit_out.uv = vec2(textureMatrix0*vec4(uv, 0., 1.));
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	vec2 uv;
+} jit_in;
+
+layout (location = 0) out vec4 outColor;
+
+uniform sampler2DRect velTex, norDepthTex;
+
+void get_best_uv(in vec2 offset, inout ivec2 bestUV, inout float closestDepth){
+
+	ivec2 testUV = ivec2(jit_in.uv + offset);
+	float testDepth = texelFetch(norDepthTex, testUV).w;
+	if(testDepth < closestDepth){
+		closestDepth = testDepth;
+		bestUV = testUV;
+	}
+}
+
+void main(void) {
+
+	ivec2 bestUV = ivec2(jit_in.uv);
+	float closestDepth = texelFetch(norDepthTex, bestUV).w;
+
+	get_best_uv(vec2(-1, -1), bestUV, closestDepth);
+	get_best_uv(vec2(+0, -1), bestUV, closestDepth);
+	get_best_uv(vec2(+1, -1), bestUV, closestDepth);
+	get_best_uv(vec2(-1, +0), bestUV, closestDepth);
+	get_best_uv(vec2(+1, +0), bestUV, closestDepth);
+	get_best_uv(vec2(-1, +1), bestUV, closestDepth);
+	get_best_uv(vec2(+0, +1), bestUV, closestDepth);
+	get_best_uv(vec2(+1, +1), bestUV, closestDepth);
+
+	outColor = texelFetch(velTex, bestUV);
+}
+]]>
+</program>
+</language>
+</jittershader>

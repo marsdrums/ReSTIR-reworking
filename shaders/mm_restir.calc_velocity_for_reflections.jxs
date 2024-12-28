@@ -1,0 +1,635 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="depthTex" type="int" default="0" />
+	<param name="norTex" type="int" default="1" />
+	<param name="posTex" type="int" default="2" />
+	<param name="prevPosTex" type="int" default="3" />
+	<param name="velTex" type="int" default="4" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="projMat" type="mat4" state="CAM_PROJECTION_MATRIX" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="nearClip" type="float" state="NEAR_CLIP" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+	<language name="glsl" version="1.5">
+		<bind param="scale" program="fp" />
+		<bind param="depthTex" program="fp" />
+		<bind param="norTex" program="fp" />
+		<bind param="posTex" program="fp" />
+		<bind param="prevPosTex" program="fp" />
+		<bind param="velTex" program="fp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="projMat" program="fp" />
+		<bind param="uv" program="vp" />
+		<bind param="texDim" program="fp" />
+		<bind param="nearClip" program="fp" />
+		<bind param="farClip" program="fp" />
+		<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec2 uv;
+out jit_PerVertex {
+	smooth vec2 uv;
+} jit_out;
+uniform mat4 textureMatrix0;
+
+void main(void) {
+	gl_Position = vec4(uv*2 - 1, 0, 1.);
+	jit_out.uv = (textureMatrix0*vec4(uv,0,1)).xy;;
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+in jit_PerVertex {
+	smooth vec2 uv;
+} jit_in;
+
+uniform sampler2DRect depthTex, norTex, posTex, prevPosTex, velTex;
+uniform vec2 texDim;
+uniform mat4 projMat;
+uniform float nearClip, farClip;
+
+layout (location = 0) out vec4 outColor;
+
+struct sample{
+	vec3 pos;
+	vec3 nor;
+	vec2 vel;
+	vec3 ref;
+	vec3 view;
+	float depth;
+};
+
+sample fillStructure(){
+
+	ivec2 iuv = ivec2(jit_in.uv);
+	vec4 lookup = texelFetch(norTex, iuv);
+	if(lookup.w == 1) discard;
+
+	sample s;
+	s.nor = lookup.xyz;
+	s.pos = texelFetch(posTex, iuv).xyz;
+	s.vel = texelFetch(velTex, iuv).xy;
+	s.view = normalize(s.pos);
+	s.ref = reflect(s.view, s.nor);
+	s.depth = texelFetch(depthTex, iuv).x;
+
+	return s;
+}
+
+vec2 calcRayDirAndDepthRatio(in sample this_s, out float depthRatio){
+
+	vec3 p = this_s.pos + this_s.ref;
+	vec4 proj = projMat * vec4(p,1);
+	proj.xy /= proj.w;
+	proj.xy *= 0.5;
+	proj.xy += 0.5;
+	proj.xy *= texDim;
+
+	vec2 diff = proj.xy - jit_in.uv;
+	float diffLen = length(diff);
+	depthRatio = diffLen;
+
+	return diff / diffLen;
+}
+
+float rayExitDistance(vec2 ro, vec2 rd) {
+
+    // Initialize distances to a large value
+    float tLeft   = 10000.0;
+    float tRight  = 10000.0;
+    float tBottom = 10000.0;
+    float tTop    = 10000.0;
+
+    // Calculate intersection distances for each screen edge
+    if (rd.x != 0.0) {
+        tLeft  = (0.0 - ro.x) / rd.x; // Left edge
+        tRight = (texDim.x - ro.x) / rd.x; // Right edge
+    }
+    if (rd.y != 0.0) {
+        tBottom = (0.0 - ro.y) / rd.y; // Bottom edge
+        tTop    = (texDim.y - ro.y) / rd.y; // Top edge
+    }
+
+    // Consider only positive distances
+    if (tLeft < 0.0) tLeft = 10000.0;
+    if (tRight < 0.0) tRight = 10000.0;
+    if (tBottom < 0.0) tBottom = 10000.0;
+    if (tTop < 0.0) tTop = 10000.0;
+
+    // Find the minimum positive distance
+    float tExit = min(min(tLeft, tRight), min(tBottom, tTop));
+    return tExit;
+}
+
+bool insideScreen(in vec2 uv){
+	return uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y;
+}
+
+vec2 project(vec3 p){
+	vec4 frag = projMat * vec4(p, 1.0);
+	return texDim*(0.5*frag.xy/frag.w + 0.5);
+}
+
+void swap(inout float a, inout float b){
+	float c = a;
+	a = b;
+	b = c;
+}
+
+float distanceSquared(vec2 a, vec2 b) {
+    a -= b;
+    return dot(a, a);
+}
+
+float reconstructCSZ(float depthBufferValue) {
+
+    vec3 c = vec3(nearClip * farClip, -nearClip + farClip, -farClip);
+    return c.x / (depthBufferValue * c.y + c.z);
+}
+bool rayTraceTest(in sample this_s, out vec3 hitPos, out vec2 hitUV){
+
+	float inclination = this_s.ref.z*this_s.ref.z*this_s.ref.z*this_s.ref.z*0.1 + 0.05;
+	float stepFactor = -0.05*inclination;
+	vec3 toTestP;
+	vec2 frag;
+
+	float dist0 = 0.0;
+	float dist1 = stepFactor * this_s.pos.z;
+
+	//coarse search
+	for(int i = 0; i < 500; i++){
+
+		toTestP = this_s.pos + this_s.ref*dist1;
+		frag = project(toTestP);
+
+		if(!insideScreen(frag)) return false; 
+
+		vec2 depths = texelFetch(depthTex, ivec2(frag)).xy;
+
+		if(toTestP.z < depths.x && toTestP.z > depths.y){
+
+			//fine search
+			float fineStep = (dist1 - dist0)/20;
+			while(dist0 <= dist1){
+
+				toTestP = this_s.pos + this_s.ref*dist0;
+				frag = project(toTestP);
+
+				vec2 depths = texelFetch(depthTex, ivec2(frag)).xy;
+				if(toTestP.z < depths.x && toTestP.z > depths.y){
+					hitUV = frag;
+					hitPos = toTestP;
+					return true;
+				}
+				dist0 += fineStep;
+			}
+		}
+		
+		dist0 = dist1;
+		dist1 += stepFactor * toTestP.z;
+	}
+
+	return false;
+}
+
+bool rayTrace(in sample this_s, out vec3 hitPos, out vec2 hitUV){
+
+/*
+	float resolution  = 10;
+	int   steps       = 1;
+
+	vec4 startView = vec4(this_s.pos, 1);
+
+	float depthRatio;
+	vec2 rd = calcRayDirAndDepthRatio(this_s, depthRatio);
+	float tfrag = 900000000;//rayExitDistance(jit_in.uv, rd);
+
+	vec4 depths, endView, startFrag, endFrag;
+
+  endView   = vec4(startView.xyz + this_s.ref*tfrag, 1);
+
+  startFrag.xy = jit_in.uv;
+
+  endFrag    = projMat * endView;
+  endFrag.xy /= endFrag.w;
+  endFrag.xy = endFrag.xy * 0.5 + 0.5;
+  endFrag.xy *= texDim;
+
+  vec2 frag  = startFrag.xy;
+
+  float deltaX    = endFrag.x - startFrag.x;
+  float deltaY    = endFrag.y - startFrag.y;
+  float useX      = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
+  float delta     = mix(abs(deltaY), abs(deltaX), useX);// * resolution;
+  vec2  increment = vec2(deltaX, deltaY) / max(delta, 0.001);
+  float stepLen = length(increment);
+  increment /= stepLen;
+  stepLen = max(1.4142135624*2, stepLen);
+  increment *= stepLen;
+
+  deltaX = 1 / deltaX;
+  deltaY = 1 / deltaY;
+
+  float search0 = 0;
+  float search1 = 0;
+
+  int hit0 = 0;
+  int hit1 = 0;
+
+  float viewDistance = startView.z;
+  float startTimesEndView = startView.z * endView.z;
+  //frag += increment;
+
+  int i = 0;
+
+  for (i = 0; i < int(delta); i++) {
+
+  	if(!insideScreen(frag)){
+  		hitUV = vec2(0.0);
+  		return;
+  	} 
+
+    depths = texture(depthTex, frag);
+
+    search1 = mix( (frag.y - startFrag.y) * deltaY, (frag.x - startFrag.x) * deltaX, useX );
+    //search1 = clamp(search1, 0.0, 1.0);
+
+    viewDistance = startTimesEndView / mix(endView.z, startView.z, search1);
+    if(viewDistance > 0 || viewDistance < -10){
+    	hitUV = vec2(0.0);
+  		return;
+    }
+
+    float bkg = texture(norTex, frag).w;
+    if(viewDistance < depths.r-0.1 && viewDistance > depths.g+0.1 && bkg != 1.0 && bkg != 0.0){
+
+      hit0 = 1;
+      break;
+    } else {
+      search0 = search1;
+    }
+    frag += increment;
+  }
+
+
+
+  search1 = search0 + ((search1 - search0) / 2.0);// + (RandomFloat01(seed) - 0.5)*0.5;
+
+  steps *= hit0;
+
+  for (i = 0; i < steps; ++i) {
+
+  	if(!insideScreen(frag)) return;
+    frag       = mix(startFrag.xy, endFrag.xy, search1);
+
+    depths = texelFetch(depthTex, ivec2(frag));
+
+    viewDistance = (startView.z * endView.z) / mix(endView.z, startView.z, search1);
+
+    if(viewDistance < depths.r-0.02 && viewDistance > depths.g+0.07){
+      hit1 = 1;
+      search1 = search0 + ((search1 - search0) / 2.0);
+    } else {
+      float temp = search1;
+      search1 = search0 + ((search1 - search0) / 2.0);
+      search0 = temp;
+    }
+  }
+
+
+  if(i >= int(delta)-1){
+  	hitUV = vec2(0.0);
+  	return;
+  }
+
+  hitUV = frag;
+*/
+	const float maxDistance = 90;
+	const float stride = 2; //cos'è???
+	const float jitter = 2;
+	const int maxSteps = 500;
+
+	// Clip to the near plane
+	float rayLength = 	((this_s.pos.z + this_s.ref.z * maxDistance) > nearClip) ?
+						(nearClip - this_s.pos.z) / this_s.ref.z : maxDistance;
+
+	vec3 csEndPoint = this_s.pos + this_s.ref * rayLength;
+	vec2 hitPixel = vec2(-1, -1);
+	
+	// Project into screen space
+	vec4 H0 = projMat * vec4(this_s.pos, 1.0);
+	vec4 H1 = projMat * vec4(csEndPoint, 1.0);
+
+	float k0 = 1.0 / H0.w; 
+	float k1 = 1.0 / H1.w;
+	vec3 Q0 = this_s.pos * k0;
+	vec3 Q1 = csEndPoint * k1;
+
+	// Screen-space endpoints
+	vec2 P0 = texDim*(H0.xy * k0*0.5 + 0.5); 
+	vec2 P1 = texDim*(H1.xy * k1*0.5 + 0.5);
+
+/*
+	// [ Optionally clip here using listing 4 ]
+	float xMax=texDim.x-0.5, xMin=0.5, yMax=texDim.y-0.5, yMin=0.5;
+	float alpha = 0.0;
+
+	// Assume P0 is in the viewport (P1 - P0 is never zero when clipping)
+	if ((P1.y > yMax) || (P1.y < yMin))
+	alpha = (P1.y - ((P1.y > yMax) ? yMax : yMin)) / (P1.y - P0.y);
+
+	if ((P1.x > xMax) || (P1.x < xMin))
+	alpha = max(alpha, (P1.x - ((P1.x > xMax) ? xMax : xMin)) / (P1.x - P0.x));
+
+	P1 = mix(P1, P0, alpha); k1 = mix(k1, k0, alpha); Q1 = mix(Q1, Q0, alpha);
+*/
+
+	P1 += vec2((distanceSquared(P1,P0) < 4) ? 1.0 : 0.0);
+	vec2 delta = P1 - P0;
+
+	bool permute = false;
+
+	if (abs(delta.x) < abs(delta.y)) {
+		permute = true;
+		delta = delta.yx; 
+		P0 = P0.yx; 
+		P1 = P1.yx;
+	}
+
+	float stepDir = sign(delta.x);
+	float invdx = stepDir / delta.x;
+
+	// Track the derivatives of Q and k.
+	vec3 dQ = (Q1 - Q0) * invdx;
+	float dk = (k1 - k0) * invdx;
+	vec2 dP = vec2(stepDir, delta.y * invdx);
+
+	dP *= stride; 
+	dQ *= stride; 
+	dk *= stride;
+	P0 += dP * jitter; 
+	Q0 += dQ * jitter; 
+	k0 += dk * jitter;
+
+	float prevZMaxEstimate = this_s.pos.z;
+
+	// Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, k from k0 to k1
+	vec3 Q = Q0; 
+	float k = k0; 
+	float stepCount = 0.0; 
+	float end = P1.x * stepDir;
+
+	hitUV = vec2(0.0);
+	hitPos = vec3(0.0);
+
+	for (	vec2 P = P0; 
+			(P.x * stepDir) <= end;
+			P += dP, Q.z += dQ.z, k += dk, stepCount += 1.0) {
+	
+		// Project back from homogeneous to camera space
+		hitPixel = permute ? P.yx : P;
+
+		if(!insideScreen(hitPixel) || stepCount >= maxSteps) return false; 
+		
+		// The depth range that the ray covers within this loop iteration.
+		// Assume that the ray is moving in increasing z and swap if backwards.
+		//float rayZMin = prevZMaxEstimate;
+		
+		// Compute the value at 1/2 pixel into the future
+		float rayZMax = (dQ.z * 0.5 + Q.z) / (dk * 0.5 + k);
+
+	 	// Camera-space z of the background at each layer (there can be up to 4)
+	 	vec4 sceneZMax = texelFetch(depthTex, ivec2(hitPixel));
+
+		if (rayZMax < sceneZMax.r && rayZMax > sceneZMax.g) {
+			//hitLayer = layer;
+			Q.xy += dQ.xy * stepCount; 
+ 			hitUV = hitPixel;
+ 			hitPos = Q / k;
+ 			return true;
+		}
+ 	}
+
+ 	// Advance Q based on the number of steps
+ 	return false;
+}
+
+//const vec2 cb_depthBufferSize; // dimensions of the z-buffer
+const float cb_zThickness = 0.2; // thickness to ascribe to each pixel in the depth buffer
+//const float cb_nearPlaneZ; // the camera's near z plane
+
+const float cb_stride = 2; // Step in horizontal or vertical pixels between samples. This is a float
+// because integer math is slow on GPUs, but should be set to an integer >= 1.
+const float cb_maxSteps = 100; // Maximum number of iterations. Higher gives better images but may be slow.
+const float cb_maxDistance = 100; // Maximum camera-space distance to trace before returning a miss.
+const float cb_strideZCutoff = 10; // More distant pixels are smaller in screen space. This value tells at what point to
+// start relaxing the stride to give higher quality reflections for objects far from
+// the camera.
+
+//const float cb_numMips; // the number of mip levels in the convolved color buffer
+//const float cb_fadeStart; // determines where to start screen edge fading of effect
+//const float cb_fadeEnd; // determines where to end screen edge fading of effect
+//const float cb_sslr_padding0; // padding for alignment
+
+bool intersectsDepthBuffer(float z, float minZ, float maxZ)
+{
+    /*
+     * Based on how far away from the camera the depth is,
+     * adding a bit of extra thickness can help improve some
+     * artifacts. Driving this value up too high can cause
+     * artifacts of its own.
+     */
+    float depthScale = min(1.0f, z * cb_strideZCutoff);
+    z += cb_zThickness + mix(0.0f, 2.0f, depthScale);
+    return (maxZ >= z) && (minZ - cb_zThickness <= z);
+}
+
+// Returns true if the ray hit something
+bool traceScreenSpaceRay(
+    // Camera-space ray origin, which must be within the view volume
+    vec3 csOrig,
+    // Unit length camera-space ray direction
+    vec3 csDir,
+    // Number between 0 and 1 for how far to bump the ray in stride units
+    // to conceal banding artifacts. Not needed if stride == 1.
+    float jitter,
+    // Pixel coordinates of the first intersection with the scene
+    out vec2 hitPixel,
+    // Camera space location of the ray hit
+    out vec3 hitPoint)
+{
+    // Clip to the near plane
+    float rayLength = ((csOrig.z + csDir.z * cb_maxDistance) < nearClip) ?
+    (nearClip - csOrig.z) / csDir.z : cb_maxDistance;
+    vec3 csEndPoint = csOrig + csDir * rayLength;
+
+    // Project into homogeneous clip space
+    vec4 H0 = projMat * vec4(csOrig, 1.0f);
+    H0.xy *= texDim;
+    vec4 H1 = projMat * vec4(csEndPoint, 1.0f);
+    H1.xy *= texDim;
+    float k0 = 1.0f / H0.w;
+    float k1 = 1.0f / H1.w;
+
+    // The interpolated homogeneous version of the camera-space points
+    vec3 Q0 = csOrig * k0;
+    vec3 Q1 = csEndPoint * k1;
+
+    // Screen-space endpoints
+    vec2 P0 = texDim*(H0.xy * k0 * 0.5 + 0.5);
+    vec2 P1 = texDim*(H1.xy * k1 * 0.5 + 0.5);
+
+    // If the line is degenerate, make it cover at least one pixel
+    // to avoid handling zero-pixel extent as a special case later
+    P1 += (distanceSquared(P0, P1) < 0.0001f) ? vec2(0.01f, 0.01f) : vec2(0.0f);
+    vec2 delta = P1 - P0;
+
+    // Permute so that the primary iteration is in x to collapse
+    // all quadrant-specific DDA cases later
+    bool permute = false;
+    if(abs(delta.x) < abs(delta.y))
+    {
+        // This is a more-vertical line
+        permute = true;
+        delta = delta.yx;
+        P0 = P0.yx;
+        P1 = P1.yx;
+    }
+
+    float stepDir = sign(delta.x);
+    float invdx = stepDir / delta.x;
+
+    // Track the derivatives of Q and k
+    vec3 dQ = (Q1 - Q0) * invdx;
+    float dk = (k1 - k0) * invdx;
+    vec2 dP = vec2(stepDir, delta.y * invdx);
+
+    // Scale derivatives by the desired pixel stride and then
+    // offset the starting values by the jitter fraction
+    float strideScale = 1.0f - min(1.0f, csOrig.z * cb_strideZCutoff);
+    float stride = 1.0f + strideScale * cb_stride;
+    dP *= stride;
+    dQ *= stride;
+    dk *= stride;
+
+    P0 += dP * jitter;
+    Q0 += dQ * jitter;
+    k0 += dk * jitter;
+
+    // Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, k from k0 to k1
+    vec4 PQk = vec4(P0, Q0.z, k0);
+    vec4 dPQk = vec4(dP, dQ.z, dk);
+    vec3 Q = Q0; 
+
+    // Adjust end condition for iteration direction
+    float end = P1.x * stepDir;
+
+    float stepCount = 0.0f;
+    float prevZMaxEstimate = csOrig.z;
+    float rayZMin = prevZMaxEstimate;
+    float rayZMax = prevZMaxEstimate;
+    float sceneZMax = rayZMax + 100.0f;
+    for(;
+        ((PQk.x * stepDir) <= end) && (stepCount < cb_maxSteps) &&
+        !intersectsDepthBuffer(sceneZMax, rayZMin, rayZMax) &&
+        (sceneZMax != 0.0f);
+        ++stepCount)
+    {
+        rayZMin = prevZMaxEstimate;
+        rayZMax = (dPQk.z * 0.5f + PQk.z) / (dPQk.w * 0.5f + PQk.w);
+        prevZMaxEstimate = rayZMax;
+        if(rayZMin > rayZMax)
+        {
+            swap(rayZMin, rayZMax);
+        }
+
+        hitPixel = permute ? PQk.yx : PQk.xy;
+        //hitPixel = texDim * (hitPixel*0.5 + 0.5);
+        // You may need hitPixel.y = depthBufferSize.y - hitPixel.y; here if your vertical axis
+        // is different than ours in screen space
+        //sceneZMax = linearDepthTexelFetch(depthBuffer, int2(hitPixel));
+        sceneZMax = texelFetch(depthTex, ivec2(hitPixel)).x;
+
+        PQk += dPQk;
+    }
+
+    // Advance Q based on the number of steps
+    Q.xy += dQ.xy * stepCount;
+    hitPoint = Q * (1.0f / PQk.w);
+    return intersectsDepthBuffer(sceneZMax, rayZMin, rayZMax);
+}
+
+
+
+
+
+float distanceToPlane(vec3 point, vec3 planePoint, vec3 N) {
+
+    return abs(dot(N, point - planePoint));
+}
+
+float rayPlaneIntersection(vec3 rd, vec3 planePoint, vec3 N) {
+
+    float denom = dot(N, rd);
+    if (abs(denom) < 1e-6) return -1.0; 
+    return dot(N, planePoint) / denom;
+}
+
+void main(void) {
+
+	sample this_s = fillStructure();
+
+	vec3 hitPos;
+	vec2 hitUV;
+
+	outColor = vec4(0, 0, 1, 0);
+
+	//if(traceScreenSpaceRay(this_s.pos, this_s.ref, 0, hitUV, hitPos)){
+	if(rayTraceTest(this_s, hitPos, hitUV)){
+
+		//outColor = vec4(hitPos,1);
+		
+		//read velocity at hitPoint
+		vec2 hitPosVel = texture(velTex, hitUV).xy;
+
+		//3) find where hitPos was at the previous frame
+		vec2 prevHitUV = hitUV - hitPosVel*texDim;
+		vec3 prevHitPos = texture(prevPosTex, prevHitUV).xyz;
+
+		//4) find the distance separating prevHitPos from the plane on which this_s.pos lies
+		float prevHitPosDist = distanceToPlane(prevHitPos, this_s.pos, this_s.nor);
+
+		//5) shift the point below the plane
+		vec3 shiftedPrevHitPos = prevHitPos - prevHitPosDist*this_s.nor*2;
+
+		//6) calc ray direction from camera to shifted prev pos
+		vec3 intersectRayDir = normalize(shiftedPrevHitPos);
+
+		//7) calc where the ray intersects the plane
+		float intersectionDist = rayPlaneIntersection(intersectRayDir, this_s.pos, this_s.nor);
+
+		if(intersectionDist > 0){
+
+			vec3 intersectionPos = intersectRayDir * intersectionDist;	
+
+			//8) project the intersection to texture space
+			vec4 projIntersection = projMat * vec4(intersectionPos, 1);
+			projIntersection.xy /= projIntersection.w;
+			projIntersection.xy = texDim*(projIntersection.xy * 0.5 + 0.5);
+
+			outColor = vec4( (jit_in.uv - projIntersection.xy - vec2(0.5,0))/texDim, 0, 0 );
+			//outColor.xy *= -1;
+		}
+	}
+	
+}
+]]>
+</program>
+</language>
+</jittershader>

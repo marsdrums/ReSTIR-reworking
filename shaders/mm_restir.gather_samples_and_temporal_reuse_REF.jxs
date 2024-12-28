@@ -1,0 +1,730 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="colTex" type="int" default="0" />
+	<param name="norDepthTex" type="int" default="1" />
+	<param name="velTex" type="int" default="2" />
+	<param name="posTex" type="int" default="3" />
+	<param name="prev_reservoirTex" type="int" default="4" />
+	<param name="prev_best_wposTex" type="int" default="5" />
+	<param name="albTex" type="int" default="6" />
+	<param name="environmentMap" type="int" default="7" />
+	<param name="roughMetalTex" type="int" default="8" />
+	<param name="depthsTex" type="int" default="9" />
+	<param name="prevPosTex" type="int" default="10" />
+	<param name="noiseTex" type="int" default="11" />
+	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="11" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="mapSize" type="vec2" state="TEXDIM7" />
+	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="MV" type="mat4" state="MODELVIEW_MATRIX" />
+	<param name="invV" type="mat4" state="VIEW_MATRIX" transform="INVERSE" />
+	<param name="V" type="mat4" state="VIEW_MATRIX" />
+	<param name="VP" type="mat4" state="VIEW_PROJECTION_MATRIX" transform="INVERSE" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="projmat" type="mat4" state="CAM_PROJECTION_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="frame" type="int" state="FRAME" />
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="nearClip" type="float" state="NEAR_CLIP" />
+	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+	<language name="glsl" version="1.5">
+		<bind param="colTex" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="velTex" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="mapSize" program="fp" />
+		<bind param="posTex" program="fp" />
+		<bind param="prev_reservoirTex" program="fp" />
+		<bind param="prev_best_wposTex" program="fp" />
+		<bind param="albTex" program="fp" />
+		<bind param="environmentMap" program="fp" />
+		<bind param="roughMetalTex" program="fp" />
+		<bind param="depthsTex" program="fp" />
+		<bind param="prevPosTex" program="fp" />
+		<bind param="noiseTex" program="fp" />
+		<bind param="prevMVP" program="fp" />
+		<bind param="farClip" program="fp" />
+		<bind param="farClip" program="vp" />
+
+		<bind param="MVP" program="vp" />
+		<bind param="MVP" program="fp" />
+		<bind param="MV" program="fp" />
+		<bind param="invV" program="fp" />
+		<bind param="V" program="fp" />
+		<bind param="VP" program="fp" />
+		<bind param="projmat" program="fp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="textureMatrix0" program="fp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="frame" program="fp" />
+		<bind param="farCorner" program="vp" />
+		<bind param="nearClip" program="vp" />
+		<bind param="eye" program="fp" />
+
+		<include source="mm_restir.structures.temporal.glsl" program="fp" />
+		<include source="c74.noise.funcs.glsl" program="fp" />
+		<include source="mm_restir.constants.glsl" program="fp" />
+		<include source="mm_restir.halton.glsl" program="fp" />
+		<include source="mm_restir.common.glsl" program="fp" />
+		<include source="mm_restir.BRDF.glsl" program="fp" />
+
+
+<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec3 dir;
+	flat vec4 plane_near;
+	flat vec4 plane_far;
+	flat vec4 plane_left;
+	flat vec4 plane_right;
+	flat vec4 plane_top;
+	flat vec4 plane_bottom;
+} jit_out;
+
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+uniform vec3 farCorner;
+uniform float nearClip, farClip;
+
+vec4 computePlane(vec3 p1, vec3 p2, vec3 p3) {
+    vec3 normal = normalize(cross(p2 - p1, p3 - p1));
+    float D = -dot(normal, p1);
+    return vec4(normal, D);
+}
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
+	jit_out.uv = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+
+   // Compute frustum dimensions
+    float far_height 	= 2.0 * abs(farCorner.y);
+    float far_width 	= 2.0 * abs(farCorner.x);
+
+    float near_height 	= (nearClip / farClip) * far_height;
+    float near_width 	= (nearClip / farClip) * far_width;
+
+    // Compute frustum corners in view space
+    vec3 near_center 	= vec3(0.0, 0.0, -nearClip);
+    vec3 far_center 	= vec3(0.0, 0.0, -farClip);
+
+    vec3 far_top_right 		= farCorner;
+    vec3 far_top_left 		= vec3(-farCorner.x, farCorner.y, farCorner.z);
+    vec3 far_bottom_right 	= vec3(farCorner.x, -farCorner.y, farCorner.z);
+    vec3 far_bottom_left 	= vec3(-farCorner.x, -farCorner.y, farCorner.z);
+
+    vec3 near_top_right 	= vec3(near_width / 2.0, near_height / 2.0, -nearClip);
+    vec3 near_top_left 		= vec3(-near_width / 2.0, near_height / 2.0, -nearClip);
+    vec3 near_bottom_right 	= vec3(near_width / 2.0, -near_height / 2.0, -nearClip);
+    vec3 near_bottom_left 	= vec3(-near_width / 2.0, -near_height / 2.0, -nearClip);
+
+    // Define frustum planes
+    jit_out.plane_near 		= computePlane(near_top_left, near_top_right, near_bottom_right); // Near plane
+    jit_out.plane_far 		= computePlane(far_top_right, far_top_left, far_bottom_left); // Far plane
+    jit_out.plane_left 		= computePlane(near_top_left, far_top_left, far_bottom_left); // Left plane
+    jit_out.plane_right 	= computePlane(far_top_right, near_top_right, near_bottom_right); // Right plane
+    jit_out.plane_top 		= computePlane(near_top_left, near_top_right, far_top_right); // Top plane
+    jit_out.plane_bottom 	= computePlane(near_bottom_right, near_bottom_left, far_bottom_left); // Bottom plane
+
+}
+]]>
+</program>
+
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+layout (location = 0) out vec4 outReservoir;
+layout (location = 1) out vec4 outPhat;
+//layout (location = 2) out vec4 outTest;
+
+uint get_rng_seed(){
+	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
+}
+
+sample get_sample(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	ivec2 iuv = ivec2(uv);
+	vec4 lookup0 = texelFetch(colTex, iuv);
+	vec4 lookup1 = texelFetch(norDepthTex, iuv);
+	vec4 lookup2 = texelFetch(velTex, iuv);
+	vec4 lookup3 = texelFetch(posTex, iuv);
+	vec4 lookup4 = texelFetch(albTex, iuv);
+	vec2 lookup5 = texelFetch(roughMetalTex, iuv).xy;
+	s.col = lookup0.rgb;
+	s.nor = lookup1.xyz;
+	s.vel = lookup2.xy;
+	s.pos = lookup3.xyz;
+	s.depth = lookup1.w;
+	s.index = index;
+	s.uv = uv;
+	s.alb = lookup4.rgb;
+	s.id = lookup4.w;
+	s.view = normalize(s.pos);
+	s.ref = reflect(s.view, s.nor);
+	s.rou = max(0.01, lookup5.x);
+	s.met = lookup5.y;
+	return s;
+}
+
+
+bool get_exit_distance_from_frustum(in vec3 ro, in vec3 rd, in vec4 plane, out float t){
+
+  // Calculate the denominator of the intersection formula
+  float denom = dot(plane.xyz, rd);
+
+  if (abs(denom) > 1e-6) {  // Avoid division by zero
+    // Calculate the intersection parameter t
+    t = -(dot(plane.xyz, ro) + plane.w) / denom;
+
+    if (t >= 0.0) {  // Check if the intersection is in the direction of the ray
+        return true;
+    } else {
+      return false;
+    }
+  } 
+
+  return false;  // Ray is parallel to the plane
+}
+
+// Generate a random ray direction within the specular lobe using GGX distribution
+vec3 generateSpecularRayRandomly(in sample this_s, inout uint seed) {
+
+    vec2 randomUV = vec2(RandomFloat01(seed), RandomFloat01(seed));
+
+        float a2 = this_s.rou * this_s.rou;
+
+		float cos2_theta = (1 - randomUV.x) / (1 - randomUV.x + a2 * randomUV.x);
+		float cos_theta = sqrt(cos2_theta);
+		float phi = M_TAU * randomUV.y;
+
+		float sin_theta = sqrt(max(0.0, 1.0 - cos2_theta));
+
+
+		vec3 halfVector = vec3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+/*
+    // GGX Microfacet Distribution sampling
+    float alpha = this_s.rou;// * this_s.rou; // GGX uses squared roughness
+    float phi = 2.0 * M_PI * randomUV.x; // Azimuthal angle
+    float cosTheta = sqrt((1.0 - randomUV.y) / (1.0 + (alpha * alpha - 1.0) * randomUV.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    // Convert spherical coordinates to Cartesian (local tangent space)
+    vec3 halfVector = vec3(
+        sinTheta * cos(phi),
+        sinTheta * sin(phi),
+        cosTheta
+    );
+*/
+// Transform the half-vector to world space using tangent, bitangent, and normal
+		float a = 1./(1. + this_s.ref.z);
+    float b = -this_s.ref.x*this_s.ref.y*a;
+    vec3 f = vec3(1. - this_s.ref.x*this_s.ref.x*a, b, -this_s.ref.x);
+   	vec3 r = vec3(b, 1. - this_s.ref.y*this_s.ref.y*a , -this_s.ref.y);
+
+   	mat3 TBN = mat3(r, f, this_s.ref);
+
+    // Compute the reflected direction based on the microfacet normal
+    vec3 reflectedDir = TBN*halfVector;
+
+    return normalize(reflectedDir);
+}
+
+
+
+vec3 get_sample_direction_from_halton(vec3 ref, float roughness){
+
+	uint seed = uint(jit_in.uv.x*2993) + uint(jit_in.uv.y*92241) + uint(11119);
+	int randomOffset = int(RandomFloat01(seed) * 64);
+
+ 	//read the current sample in the Halton sequence and place it over the hemisphere
+
+ 	int i = (frame + randomOffset) % 64; //***move to vertex stage
+ 	float a = halton[i].x*M_TAU; //*** precompute!
+	float c = 1 - halton[i].y;
+	float b = acos(c) * roughness;
+	float sinb = sin(b);
+	vec3 rd = vec3(	sinb*cos(a), sinb*sin(a), cos(b));
+
+	//rotate halton			
+	float randAngle = RandomFloat01(seed)*M_TAU;
+	vec3 rotx = vec3(cos(randAngle), sin(randAngle),0);
+	vec3 roty = cross(rotx, vec3(0,0,1));
+
+	rd = rd.x*rotx + rd.y*roty + vec3(0,0,rd.z);
+
+	//rotate direction and return
+	float q = 1/(1 + ref.z);
+	float refyq = ref.y*q;
+	float h = -ref.x*refyq;
+	vec3 front = vec3(1. - ref.x*ref.x*q, h, -ref.x);
+	vec3 up = vec3(h, 1. - ref.y*refyq, -ref.y);
+					
+	return rd.x*up + rd.y*front + rd.z*ref;
+
+}
+
+float BsdfNDot(vec3 k){ return k.z; }
+
+float SchlickFresnel(float r0, float radians){
+	
+    // -- The common Schlick Fresnel approximation
+    float x = 1.0 - radians;
+    float x2 = x*x;
+    x2 *= x2;
+    x *= x2;
+    return r0 + (1.0 - r0) * x;
+}
+
+// non height-correlated masking-shadowing function is described here:
+float SmithGGXMaskingShadowing(vec3 wi, vec3 wo, vec3 n, float a2){
+	
+    float dotNL = dot(n,wi);
+    float dotNV = dot(n,wo);
+
+    float denomA = dotNV * sqrt(a2 + (1.0 - a2) * dotNL * dotNL);
+    float denomB = dotNL * sqrt(a2 + (1.0 - a2) * dotNV * dotNV);
+
+    return 2.0 * dotNL * dotNV / (denomA + denomB);
+}
+
+//from https://schuttejoe.github.io/post/ggximportancesamplingpart1/
+vec4 generate_ray_from_GGX_PDF(in sample this_s){
+
+	float a = this_s.rou;
+	float a2 = a*a;
+
+	vec3 wo = this_s.view;
+
+    // -- Generate uniform random variables between 0 and 1
+	uint seed = uint(jit_in.uv.x*2993) + uint(jit_in.uv.y*92241) + uint(11119);
+	int randomOffset = int(RandomFloat01(seed) * 64);
+
+ 	//read the current sample in the Halton sequence
+ 	int i = (frame + randomOffset) % 64; //***move to vertex stage
+ 	float e0 = fract(halton[i].x+RandomFloat01(seed));
+	float e1 = fract(halton[i].y+RandomFloat01(seed));
+
+    // -- Calculate theta and phi for our microfacet normal wm by
+    // -- importance sampling the Ggx distribution of normals
+    float theta = acos(sqrt((1.0 - e0) / ((a2 - 1.0) * e0 + 1.0)));
+    float phi  = M_TAU * e1;
+
+    // -- Convert from spherical to Cartesian coordinates
+    vec3 wm = vec3(	sin(theta) * cos(phi),	
+					sin(theta) * sin(phi),
+					cos(theta));
+
+	float q = 1/(1 + this_s.nor.z);
+	float noryq = this_s.nor.y*q;
+	float h = -this_s.nor.x*noryq;
+	vec3 front = vec3(1. - this_s.nor.x*this_s.nor.x*q, h, -this_s.nor.x);
+	vec3 up = vec3(h, 1. - this_s.nor.y*noryq, -this_s.nor.y);
+					
+	wm = wm.x*up + wm.y*front + wm.z*this_s.nor;
+
+    //vec3 front = this_s.nor;
+	//vec3 right = normalize(cross(vec3(0,1,0), front));
+	//vec3 up = normalize(cross(front, right));
+	//mat3 TBN = mat3(right, up, front);
+	//wm = TBN * wm;
+
+    // -- Calculate wi by reflecting wo about wm
+    vec3 wi = reflect(wo,wm);//2.0 * dot(wo, wm) * wm - wo;
+
+    // -- Ensure our sample is in the upper hemisphere
+    // -- Since we are in tangent space with a y-up coordinate
+    // -- system BsdfNDot(wi) simply returns wi.y
+	float reflectance = 0.0;
+    if(dot(wi, this_s.nor) > 0.0 && dot(wi, wm) > 0.0) {
+
+    	float dotWiWm = dot(wi, wm);
+
+        // -- calculate the reflectance to multiply by the energy
+        // -- retrieved in direction wi
+		float F0 = 0.04;
+        float F = SchlickFresnel(F0, dotWiWm);
+        float G = SmithGGXMaskingShadowing(wi, wo, this_s.nor, a2);
+        float weight = abs(dot(wo, wm)) / (dot(wo, this_s.nor) * dot(wm, this_s.nor));
+
+        reflectance = F * G * weight; 
+    }
+
+    //wi = TBN*wi;
+    //wi = (V * vec4(wi,0)).xyz;
+    return vec4(wi, reflectance);
+
+}
+
+vec4 get_sample_uv_or_dir(in sample this_s, inout uint seed){
+
+
+	//vec4 rayDir_reflectance = generate_ray_from_GGX_PDF(this_s);
+	vec4 rayDir_reflectance = generate_ray_from_GGX_VNDF(this_s);
+
+	vec3 pivot = rayDir_reflectance.xyz;
+	float reflectance = 1;//rayDir_reflectance.w; //*** WHY DOESN'T WORK?!?
+
+	//if the ray is shot below the floor, re-shot it randomly
+	bool valid = false;
+ 	for(int k = 0; k < 10; k++){
+			if( dot(pivot, this_s.nor) > 0 ){
+				valid = true;
+				break;
+			}
+			pivot = generateSpecularRayRandomly(this_s, seed);
+ 	}
+ 	
+ 	if(!valid) return vec4(0.0);
+ 	
+	if(pivot.z > 0.999){
+	  return vec4(pivot, -reflectance);
+	}
+
+	float t = 999999;
+	float test_t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_near, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_far, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_left, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_right, test_t) ? 	min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_top, test_t) ? 		min(t, test_t) : t;
+	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_bottom, test_t) ? 	min(t, test_t) : t;
+
+	vec4 depths;// = startView;
+	vec4 endView;
+	vec4 startFrag;
+	vec4 endFrag;
+
+  	float resolution  = mix(0.1, 0.2, RandomFloat01(seed));// 0.1;
+  	int   steps       = 1;
+ 	vec4 startView = vec4(this_s.pos, 1);
+
+  endView   = vec4(startView.xyz + pivot*t, 1);
+
+  startFrag    = startView;
+  startFrag.xy = this_s.uv;
+
+  endFrag      = endView;
+  endFrag      = projmat * endFrag;
+  endFrag.xy 	/= endFrag.w;
+  endFrag.xy   = endFrag.xy * 0.5 + 0.5;
+  endFrag.xy  *= texDim;
+
+  //return vec4( mix(startFrag.xy, endFrag.xy, vec2(RandomFloat01(seed))), 0.0, reflectance);
+
+  vec2 frag  = startFrag.xy;
+   //vec4   uv;
+   //uv.xy = frag/texDim;
+
+  float deltaX    = endFrag.x - startFrag.x;
+  float deltaY    = endFrag.y - startFrag.y;
+  float useX      = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
+  float delta     = mix(abs(deltaY), abs(deltaX), useX) * resolution;//clamp(resolution, 0.0, 1.0);
+  vec2  increment = vec2(deltaX, deltaY) / max(delta, 0.001);
+  frag += increment;// * (RandomFloat01(seed)*0.5) + increment*0.0001;
+
+  float search0 = 0;
+  float search1 = 0;
+
+  int hit0 = 0;
+  int hit1 = 0;
+
+  float viewDistance = startView.z;
+
+  float i = 0;
+
+  bool found = false;
+
+  for (i = 0; i < int(delta); i+=1) {
+    
+    	if(i >= int(delta)-1){
+    		//if the ray didn't hit any geometry, sample from the envionment map
+	
+    		//convert ray direction from view to world space
+    		return  vec4(pivot, -reflectance);
+	
+    		//to texture space
+    		//frag = vec2(atan(pivot.z, pivot.x), asin(pivot.y));
+    		//frag *= vec2(-0.1591549431, 0.3183098862);//vec2(-1/(2*M_PI), 1/M_PI); //to invert atan
+    		//frag += 0.5;
+    		//frag *= mapSize;
+    		//return -frag; //i use negative uv coordinates to instruct the following functions to take a sample from the env map
+    	}
+    //uv.xy      = frag / texDim;
+
+    depths = texture(depthsTex, frag);
+
+    search1 = mix( (frag.y - startFrag.y) / deltaY, (frag.x - startFrag.x) / deltaX, useX );
+    search1 = clamp(search1, 0.0, 1.0);
+
+    viewDistance = (startView.z * endView.z) / mix(endView.z, startView.z, search1);
+    //depth        = positionTo.r - viewDistance;
+
+    //if ( 	(depths.r >= viewDistance && viewDistance < depths.g ) || 
+    //			(depths.b >= viewDistance && viewDistance < depths.a ) ){
+    if(viewDistance < depths.r-0.07 && viewDistance > depths.g+0.07){
+    //if(depth > 0 && depth < thickness){
+      hit0 = 1;
+      found = true;
+      break;
+    } else {
+      search0 = search1;
+    }
+    frag += increment;
+  }
+
+  search1 = search0 + ((search1 - search0) / 2.0);// + (RandomFloat01(seed) - 0.5)*0.5;
+
+  steps *= hit0;
+
+  for (i = 0; i < steps; ++i) {
+    frag       = mix(startFrag.xy, endFrag.xy, search1);
+
+    //uv.xy      = frag / texDim;
+    depths = texelFetch(depthsTex, ivec2(frag));
+
+    viewDistance = (startView.z * endView.z) / mix(endView.z, startView.z, search1);
+    //depth        = positionTo.r - viewDistance;
+
+    //if ( 	(depths.r > viewDistance && viewDistance > depths.g) || 
+    //			(depths.b > viewDistance && viewDistance > depths.a) ){
+    if(viewDistance < depths.r-0.02 && viewDistance > depths.g+0.07){
+    //if(depth > 0 && depth < thickness){
+      hit1 = 1;
+      search1 = search0 + ((search1 - search0) / 2.0);
+    } else {
+      float temp = search1;
+      search1 = search0 + ((search1 - search0) / 2.0);
+      search0 = temp;
+    }
+  }
+
+  return vec4(frag,0,reflectance);
+
+}
+
+
+vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir, out vec2 hitPosUV){
+
+    vec4 reservoir = vec4(0); //curr reservoir
+
+	int M = 1;//int(4*this_s.rou + 1); //num of from the view port
+
+	int sample_index;
+	vec3 candidate_dir;
+
+	vec4 sample_uv_or_dir;
+	sample test_s;
+
+	if(background(this_s)) return vec4(0.0);
+
+	//initial selection of 1 sample of M
+	for (int i = 0; i < M; i++)
+	{
+		sample_uv_or_dir = get_sample_uv_or_dir(this_s, seed);
+		
+		if(sample_uv_or_dir.x == 0) continue; //the random ray generator failed
+
+		//sample_uv_or_dir = vec4(RandomFloat01(seed)*texDim.x, RandomFloat01(seed)*texDim.y, 0, 1);
+		hitPosUV = sample_uv_or_dir.xy; //move this to the end of the function in case the environment is sampled instead of the viewport
+
+		if(sample_uv_or_dir.w > 0){ //if the sample is from the viewport
+
+		    sample_index = int(uv2index(sample_uv_or_dir.xy));
+		    test_s = get_sample_pos_col(sample_index);
+			p_hat = length( get_specular_radiance(this_s, test_s) );
+			//p_hat /= sample_uv_or_dir.w;
+			reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);	
+
+		} else { //if the sample comes from the environment
+			
+			candidate_dir = sample_uv_or_dir.xyz;
+	    	test_s = get_environment_sample(candidate_dir, seed, this_s.rou);
+			p_hat = length( get_radiance_for_env(this_s, test_s) );	
+			//p_hat /= -sample_uv_or_dir.w;
+			reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);	
+		}
+		
+	}
+
+	if(reservoir.y >= 0){ //if it's a sample from the viewport
+
+		test_s = get_sample(int(reservoir.y));
+		p_hat = length( get_specular_radiance(this_s, test_s) );
+
+	} else { //if it's a sample from the environment map
+
+		test_s = get_environment_sample(best_dir, seed, this_s.rou);
+		p_hat = length( get_radiance_for_env(this_s, test_s) );
+	}
+
+	reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+	return reservoir;
+}
+
+bool valid_reprojection(in sample this_s, in vec2 uv){
+
+	//simplify this!!
+	if(!valid_uv(uv)) return false;
+	return true;
+}
+
+float distanceToPlane(vec3 point, vec3 planePoint, vec3 N) {
+
+    return abs(dot(N, point - planePoint));
+}
+
+float rayPlaneIntersection(vec3 rd, vec3 planePoint, vec3 N) {
+
+    float denom = dot(N, rd);
+    if (abs(denom) < 1e-6) return -1.0; 
+    return dot(N, planePoint) / denom;
+}
+
+bool visible(in sample this_s, in sample test_s){
+	//return true;
+	float uvLen = length(this_s.uv - test_s.uv);
+	float num_iterations = uvLen*2;
+	float step = 1 / num_iterations;
+	float start = 0.001;//step * (1 + RandomFloat01(seed) - 0.5);
+	for(float i = start; i < 1; i += step){ //make a better tracing
+		vec2 test_uv = mix(this_s.uv, test_s.uv, i);
+		float expected_depth = (this_s.pos.z * test_s.pos.z) / mix(test_s.pos.z, this_s.pos.z, i);
+		vec4 sampled_depth = texelFetch(depthsTex, ivec2(test_uv));
+
+    	if ( 	(sampled_depth.r > expected_depth+0.07 && expected_depth-0.07 > sampled_depth.g) 
+    			/*(sampled_depth.b > expected_depth+0.07 && expected_depth-0.07 > sampled_depth.a)*/ ){
+
+    		return false;
+    	}
+	}
+	return true;
+}
+
+void main(void) {
+
+	uint seed = get_rng_seed();
+	sample this_s = get_sample(uv2index(jit_in.uv));
+	if(this_s.depth == 1){
+		outReservoir = vec4(0.0);
+		outPhat = vec4(0.0);
+		return;
+	}
+
+	sample test_s;
+
+	float p_hat;
+	vec3 best_dir;
+	vec2 hitPosUV;
+	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir, hitPosUV);
+
+	ivec2 reprojected_uv = ivec2( this_s.uv - this_s.vel*texDim );
+
+
+	//TEMPORAL REUSE//____________________________________________________________
+
+	float disocclusion = texelFetch(velTex, ivec2(jit_in.uv)).b;
+	//ivec2 reprojected_uv = ivec2(reprojected_uv);
+	if(valid_reprojection(this_s, vec2(reprojected_uv)) && disocclusion < 0.5){
+
+		vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
+		//prev_reservoir.w *= 0.2;
+		vec4 temporal_reservoir = vec4(0);
+
+		// combine current reservoir
+		temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+		
+		// combine previous reservoir
+		if(prev_reservoir.y >= 0){
+
+			vec4 lookup_prev_pos_id = texelFetch(prev_best_wposTex, reprojected_uv);
+			vec4 prev_best_wpos = projmat * vec4( (V * vec4(lookup_prev_pos_id.yzw, 1)).xyz, 1);
+			prev_best_wpos.xy /= prev_best_wpos.w;
+			prev_best_wpos.xy = prev_best_wpos.xy * 0.5 + 0.5;
+			vec2 prev_best_wpos_uv = floor((textureMatrix0 * vec4(prev_best_wpos.xy,1,1)).xy) + 0.5;// * texDim;
+
+			//vec2 prev_best_wpos_uv = vec2(reprojected_uv);
+
+			if(valid_uv(prev_best_wpos_uv)){
+
+				prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
+				test_s = get_sample(int(prev_reservoir.y));
+				p_hat = 0;
+				
+				if(!background(test_s)){
+					vec3 dummy_dir;
+					p_hat = length( get_specular_radiance(this_s, test_s));
+					prev_reservoir.z =  min(4, prev_reservoir.z);
+					temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, dummy_dir, dummy_dir);
+
+				}
+			}
+
+		} else {
+
+			vec3 prev_best_dir = texelFetch(prev_best_wposTex, reprojected_uv).yzw;
+			test_s = get_environment_sample(prev_best_dir, seed, this_s.rou);
+			p_hat = length( get_radiance_for_env(this_s, test_s) );
+			prev_reservoir.z = min(4, prev_reservoir.z);
+			temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
+
+		}
+
+		temporal_reservoir.z = reservoir.z + prev_reservoir.z;
+		
+		if(temporal_reservoir.y >= 0){
+			test_s = get_sample(int(temporal_reservoir.y));
+			p_hat = length( get_specular_radiance(this_s, test_s) );		
+		} else {
+			test_s = get_environment_sample(best_dir, seed, this_s.rou);
+			p_hat = length( get_radiance_for_env(this_s, test_s) );
+				
+		}
+		
+		temporal_reservoir.w = (1 / max(p_hat, 0.0001)) * (temporal_reservoir.x / max(temporal_reservoir.z, 0.0001));		
+		reservoir = temporal_reservoir;	
+		
+	}
+
+	//___________________________________________________________________________________________________________________________________________________________
+
+
+	if(reservoir.y >= 0){ //if the sample is from the viewport
+
+		test_s = get_sample(int(reservoir.y));
+
+		float p_hat = length(get_specular_radiance(this_s, test_s));
+		reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+
+		outPhat = vec4( p_hat, (invV * vec4(test_s.pos, 1)).xyz);
+
+	} else { //if the sample is from the environment map
+
+		test_s = get_environment_sample(best_dir, seed, this_s.rou);
+
+		p_hat = length( get_radiance_for_env(this_s, test_s) );
+		reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		outPhat = vec4(p_hat, best_dir);
+	}
+
+	outReservoir = reservoir;
+	
+}
+]]>
+</program>
+</language>
+</jittershader>
