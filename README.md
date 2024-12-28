@@ -36,7 +36,7 @@ The velocity vectors are used to temporally reproject "stuff" from the previous 
 >[!NOTE]
 > As an alternative, we could pick the velocity of the closest fragment (smallest depth value) within the tile.
 
-When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described here https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
+When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described in detail here: https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
 
 ```glsl
 // Assume we store UV offsets
@@ -51,6 +51,18 @@ float velocityLength = length(previousVelocityUV - currentVelocityUV);
 // Adjust value
 float weight = saturate((velocityLength - 0.001) * 10.0);
 ```
+
+The weights are stored in the blu channel of the inflated velocity texture.
+Weights are used to accept/reject temporal reprojections, and they're used both in the temporal reuse of the reservoirs and in temporal filtering.
+
+#### Velocity vectors for reflections
+
+Velocity vectors teel how a given fragment moved from frame to frame; while they're perfect to temporally reproject reservoirs and colors (in temporal filter) for the diffuse component, they fail miserably in reprojecting reflections. To compute reliable motion vectors for temporally reproject reflections, i'm using this method: https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf .
+This approach requires retrieving the local transofrm for any reflected fragment, which is not possible in the current framework. I've been trying to adapt the method to work without accessing the local transform.
+
+>[!WARNING]
+> The solution i came up with seems to (kinda) work, but it's still unclear how to deal with rough reflections.
+
 
 #### Downscaling
 
