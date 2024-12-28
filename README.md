@@ -58,7 +58,7 @@ Weights are used to accept/reject temporal reprojections, and they're used both 
 #### Velocity vectors for reflections
 
 Velocity vectors teel how a given fragment moved from frame to frame; while they're perfect to temporally reproject reservoirs and colors (in temporal filter) for the diffuse component, they fail miserably in reprojecting reflections. To compute reliable motion vectors for temporally reproject reflections, i'm using this method: https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf .
-This approach requires retrieving the local transofrm for any reflected fragment, which is not possible in the current framework. I've been trying to adapt the method to work without accessing the local transform.
+This approach requires retrieving the local transofrm for any reflected fragment, which is not possible in the current framework. I've been trying to adapt/approximate the method to work without accessing the local transform.
 
 >[!WARNING]
 > The solution i came up with seems to (kinda) work, but it's still unclear how to deal with rough reflections.
