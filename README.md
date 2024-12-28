@@ -31,10 +31,12 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 
 #### Velocity inflation and disocclusion weights
 
-The velocity vectors are used to temporally reproject "stuff" from the previous frame onto the current. Temporal reprojection is used for reservoirs temporal reuse, and for temporal filtering. Sice velocity vectors are bound to the shape generating them, small imprecision can lead to faulty reprojections of the pixels at the edges of a shapes, producing ghosting effects. To account for this, the velocity vectors are "inflated", extending them over the shape to which they belong. The inflation is acchieved by considering 2x2 tiles and picking the velocity with the highest magnitude.
+Velocity vectors are used to temporally reproject data from the previous frame onto the current frame. Temporal reprojection serves two key purposes: enabling the temporal reuse of reservoirs and supporting temporal filtering. Since velocity vectors are tied to the geometry that generates them, even minor inaccuracies can result in faulty reprojections at shape edges, leading to ghosting artifacts.
+
+To mitigate this, velocity vectors are "inflated," extending them over the shape they belong to. This inflation is achieved by examining 2x2 tiles and selecting the velocity vector with the highest magnitude within each tile.
 
 >[!NOTE]
-> As an alternative, we could pick the velocity from the closest fragment (smallest depth value) within the tile.
+> Alternatively, the velocity vector could be chosen based on the closest fragment (i.e., the fragment with the smallest depth value) within the tile.
 
 When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described in detail here: https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
 
@@ -57,16 +59,17 @@ Weights are used to accept/reject temporal reprojections, and they're used both 
 
 #### Velocity vectors for reflections
 
-Velocity vectors teel how a given fragment moved from frame to frame; while they're perfect to temporally reproject reservoirs and colors (in temporal filter) for the diffuse component, they fail miserably in reprojecting reflections. To compute reliable motion vectors for temporally reproject reflections, i'm using this method: https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf .
-This approach requires retrieving the local transofrm for any reflected fragment, which is not possible in the current framework. I've been trying to adapt/approximate the method to work without accessing the local transform.
+Velocity vectors describe how a given fragment moves between frames. While they are ideal for temporally reprojection of reservoirs and colors (in the temporal filter) for the diffuse component, they are inadequate for reprojection of reflections. To compute reliable motion vectors for temporal reprojection of reflections, I’ve been exploring the method outlined in this paper -> https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf.
+
+This approach requires retrieving the local transform for each reflected fragment, which is currently not feasible within the existing framework. I’ve been working to adapt or approximate the method to function without direct access to the local transform.
 
 >[!WARNING]
-> The solution i came up with seems to (kinda) work, but it's still unclear how to deal with rough reflections. 
+> The solution I’ve devised appears to work to some extent, but there are still unresolved challenges in handling rough reflections and accounting for disocclusion weights. 
 
 
 #### Downscaling
 
-Each render target goes through a process of downscaling, to cut the texture size in half. Half-size render targets are used during the samples collecting process and during reservoirs reuse. The downscaling happens by randomly picking one pixel in a 2x2 tile. The chosen pixel within the tile is the same for all the render targets. 
+Each render target undergoes a downscaling process, reducing its texture size by half. These half-size render targets are utilized during sample collection and reservoir reuse. Downscaling is achieved by randomly selecting one pixel within a 2x2 tile. The same pixel is chosen across all render targets within the tile.
 
 >[!NOTE]
-> I tried different strategies for downsampling the render targets: the first choice was to always pick the same pixel within the tile (top-left). This works, but leads to visible jaggyness along the shape edges. I also tried averaging the pixel values within each tile (making sure to re-normalize normals), but this negatively affects ray-marching when it comes to depth comparison. Randomly picking a pixel within the 2x2 tile seems to be the best choice, as it improves sample variance and works as a sort of "downscaled-TAA" when the image is temporally filtered.
+> I experimented with several strategies for downsampling the render targets. Initially, I consistently chose the top-left pixel within each tile. While functional, this resulted in noticeable jagged edges along shapes. Another approach involved averaging the pixel values within each tile (ensuring normal vectors were re-normalized), but this adversely affected ray-marching during depth comparisons. Randomly selecting a pixel within the 2x2 tile proved to be the most effective method. It enhances sample variance and acts as a form of "downscaled TAA" when the image undergoes temporal filtering.
