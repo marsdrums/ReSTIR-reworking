@@ -34,13 +34,33 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 The velocity vectors are used to temporally reproject "stuff" from the previous frame onto the current. Temporal reprojection is used for reservoirs temporal reuse, and for temporal filtering. Sice velocity vectors are bound to the shape generating them, small imprecision can lead to faulty reprojections of the pixels at the edges of a shapes, producing ghosting effects. To account for this, the velocity vectors are "inflated", extending them over the shape to which they belong. The inflation is acchieved by considering 2x2 tiles and picking the velocity with the highest magnitude.
 
 >[!NOTE]
-> As an alternative, we could pick the velocity of the closest fragment within the tile.
+> As an alternative, we could pick the velocity of the closest fragment (smallest depth value) within the tile.
 
+When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described here https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
 
+```glsl
+// Assume we store UV offsets
+vec2 currentVelocityUV = CurrentVelocityTexture.Sample(uv);
+ 
+// Read previous velocity
+vec2 previousVelocityUV = PreviousVelocityTexture.Sample(uv + currentVelocityUV);
+ 
+// Compute length between vectors
+float velocityLength = length(previousVelocityUV - currentVelocityUV);
+ 
+// Adjust value
+float velocityDisocclusion = saturate((velocityLength - 0.001) * 10.0);
+ 
+// Calculate base accumulated quantity
+vec3 accumulation = currentFrame * 0.1 + previousFrameClamped * 0.9;
+ 
+// Lerp towards a backup value - could be a blurred version derived from the neighborhood
+vec3 output = lerp(accumulation, currentFrameBlurred, velocityDisocclusion);
+```
 
 #### Downscaling
 
-Each render target goes through a process of downscaling, to cut the texture size in half. Half-size render targets are used during the samples collecting process. The downscaling happens by randomly picking one pixel in a 2x2 tile. The chosen pixel within the tile is the same for all the render targets. 
+Each render target goes through a process of downscaling, to cut the texture size in half. Half-size render targets are used during the samples collecting process and during reservoirs reuse. The downscaling happens by randomly picking one pixel in a 2x2 tile. The chosen pixel within the tile is the same for all the render targets. 
 
 >[!NOTE]
 > I tried different strategies for downsampling the render targets: the first choice was to always pick the same pixel within the tile (top-left). This works, but leads to visible jaggyness along the shape edges. I also tried averaging the pixel values within each tile (making sure to re-normalize normals), but this negatively affects ray-marching when it comes to depth comparison. Randomly picking a pixel within the 2x2 tile seems to be the best choice, as it improves sample variance and works as a sort of "downscaled-TAA" when the image is temporally filtered.
