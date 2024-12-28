@@ -15,3 +15,16 @@ The "gi" pass also considers the BRDF (Bidirectional Reflectance Distribution Fu
 ## Anatomy of the "gi" pass
 
 ![](./images/algorithm-scheme.png)
+
+### "gi" pass inputs
+
+The "gi" pass relies on many inputs; some of them are the render targets, wheter taken directly or after some processing, some others are the result of the previous frame reprojected onto the current one.
+
+#### The render targets
+
+- Color buffer: it contains the image as rendered during the forward phase. It includes direct illumination + shadows.
+- Normals + depth: it contains view-space normals and normalized depth (= length(view-space-position)).
+- Velocity buffer: it contains screen-space velocity vectors, encoded as red = horizontal_velocity, and green = vertical_velocity.
+- Albedo buffer: it contains the albedo color as processed by jit.gl.pbr
+- Roughness and metalness buffer: it contains the roughness and metalness values as processed by jit.gl.pbr in the red and green channels respectively
+- 4 layers of depth: it contains four layers of depth (view-space.z) obtained through depth peeling. R = closest front face depth; G = closest back face depth; B = second closest front face depth; A = second closest back face depth. Having 4 depth layers improves the accuracy of screen-space ray marching.
