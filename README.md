@@ -118,3 +118,7 @@ Random pixels are sampled from the Previous-frame composited image. The random d
 
 ![](./images/reflections.png)
 
+# Compositing
+
+![](./images/reflections.png)
+
