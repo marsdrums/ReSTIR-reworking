@@ -22,9 +22,14 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 
 #### The render targets
 
-- Color buffer: it contains the image as rendered during the forward phase. It includes direct illumination + shadows.
+- Color buffer: it contains the image as rendered in the forward phase. It includes direct illumination + shadows.
 - Normals + depth: it contains view-space normals and normalized depth (= length(view-space-position)).
 - Velocity buffer: it contains screen-space velocity vectors, encoded as red = horizontal_velocity, and green = vertical_velocity.
 - Albedo buffer: it contains the albedo color as processed by jit.gl.pbr
 - Roughness and metalness buffer: it contains the roughness and metalness values as processed by jit.gl.pbr in the red and green channels respectively
 - 4 layers of depth: it contains four layers of depth (view-space.z) obtained through depth peeling. R = closest front face depth; G = closest back face depth; B = second closest front face depth; A = second closest back face depth. Having 4 depth layers improves the accuracy of screen-space ray marching.
+
+each render target goes through a process of downscaling, to cut the texture size in half. Half-size render targets are used during the samples collecting process. The downscaling happens by randomly picking one pixel in a 2x2 tile. The chosen pixel within the tile is the same for all the render targets. 
+
+>[!NOTE]
+> I tried different strategies for downsampling the render targets: the first choice was to always pick the same pixel within the tile. This works, but leads to visible jaggyness along the shape edges. I also tried averaging the pixel values within each tile (making sure to re-normalize normals), but this negatively affects ray-marching when it comes to depth comparison. Randomly picking a pixel within the 2x2 tile seems to be the best choice, as it works as a sort of "downscaled-TAA".
