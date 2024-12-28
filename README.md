@@ -105,10 +105,10 @@ The indirect diffuse computation starts by gathering color samples. The gatherin
 
 ### Gathering samples from the viewport
 
-Random pixels are sampled from the Previous-frame composited image. The sampling distribution is uniform, and any pixel has the same propability of being sampled.
+Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and any pixel has the same propability of being sampled. If the sampled pixel is on the empty background of the rendered image, it's discarded.
 
 >[!NOTE]
-> We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without warring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on in the ReSTIR process.
+> We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on in the ReSTIR process.
 
 ### Gathering samples from the a selection of brightest pixels
 
