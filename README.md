@@ -40,22 +40,16 @@ When objects move, new fragment may be disoccluded and appear on screen for the 
 
 ```glsl
 // Assume we store UV offsets
-vec2 currentVelocityUV = CurrentVelocityTexture.Sample(uv);
+vec2 currentVelocityUV = texture(velocityTexture, uv).xy;
  
 // Read previous velocity
-vec2 previousVelocityUV = PreviousVelocityTexture.Sample(uv + currentVelocityUV);
+vec2 previousVelocityUV = texture(previousVelocityTexture, uv + currentVelocityUV).xy;
  
 // Compute length between vectors
 float velocityLength = length(previousVelocityUV - currentVelocityUV);
  
 // Adjust value
-float velocityDisocclusion = saturate((velocityLength - 0.001) * 10.0);
- 
-// Calculate base accumulated quantity
-vec3 accumulation = currentFrame * 0.1 + previousFrameClamped * 0.9;
- 
-// Lerp towards a backup value - could be a blurred version derived from the neighborhood
-vec3 output = lerp(accumulation, currentFrameBlurred, velocityDisocclusion);
+float weight = saturate((velocityLength - 0.001) * 10.0);
 ```
 
 #### Downscaling
