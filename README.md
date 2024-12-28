@@ -23,7 +23,7 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 #### The render targets
 
 - Color buffer: it contains the image as rendered in the forward phase. It includes direct illumination + shadows.
-- Normals + depth: it contains view-space normals and normalized depth (= length(view-space-position)).
+- Normals + depth: it contains view-space normals and normalized depth (= length(view-space-position)/far_clip ).
 - Velocity buffer: it contains screen-space velocity vectors, encoded as red = horizontal_velocity, and green = vertical_velocity.
 - Albedo buffer: it contains the albedo color as processed by jit.gl.pbr.
 - Roughness and metalness buffer: it contains the roughness and metalness values as processed by jit.gl.pbr in the red and green channels respectively
@@ -66,10 +66,26 @@ This approach requires retrieving the local transform for each reflected fragmen
 >[!WARNING]
 > The solution I’ve devised appears to work to some extent, but there are still unresolved challenges in handling rough reflections and accounting for disocclusion weights. 
 
-
 #### Downscaling
 
 Each render target undergoes a downscaling process, reducing its texture size by half. These half-size render targets are utilized during sample collection and reservoir reuse. Downscaling is achieved by randomly selecting one pixel within a 2x2 tile. The same pixel is chosen across all render targets within the tile.
 
 >[!NOTE]
-> I experimented with several strategies for downsampling the render targets. Initially, I consistently chose the top-left pixel within each tile. While functional, this resulted in noticeable jagged edges along shapes. Another approach involved averaging the pixel values within each tile (ensuring normal vectors were re-normalized), but this adversely affected ray-marching during depth comparisons. Randomly selecting a pixel within the 2x2 tile proved to be the most effective method. It enhances sample variance and acts as a form of "downscaled TAA" when the image undergoes temporal filtering.
+> I experimented with several strategies for downsampling the render targets. Initially, I consistently chose the top-left pixel within each tile (and it's so in the currently released version of the pass FX). While functional, this resulted in noticeable jagged edges along shapes. Another approach involved averaging the pixel values within each tile (ensuring normal vectors were re-normalized), but this adversely affected ray-marching during depth comparisons. Randomly selecting a pixel within the 2x2 tile proved to be the most effective method. It enhances sample variance and acts as a form of "downscaled TAA" when the image undergoes temporal filtering.
+
+#### Environment map
+
+The "gi" pass can access the environment map provided via jit.gl.environment. When "gi" is instanciated, IBL computation gets disabled in jit.gl.pbr, and the light coming from the environment is computed in the pass instead.
+
+#### Short-range AO
+
+A short range ambient occlusion is computed ray marching through the 4 depth layers. Ambient occlusion is computed by taking 8 samples per frame within the hemisphere above the surface; Samples are distributed using blue noise. The AO isn't applied directly to the rendered image; rather, it's used to control the reservoir spatial reuse, and the ReSTIR resolve pass. More about that in the dedicated sections.
+
+#### Previous-frame composited image
+
+The result of the previous frame is reprojected onto the current frame and used as source for indirect illumination; This process allows for computing multiple light bounces across frames. Only the diffuse component is reprojected at the next frame (because is not view-dependent). Reflections are fed back only of the surface is metallic.
+
+>[!NOTE]
+> Reprojecting reflections allows for inter-reflections. The result isn't physically accurate, because reflections are striclty view dependent. Still, with metallic objects, non-correct inter-reflections look better than no inter-reflection...
+
+# Diffuse
