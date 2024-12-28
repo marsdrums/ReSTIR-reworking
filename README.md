@@ -34,7 +34,7 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 The velocity vectors are used to temporally reproject "stuff" from the previous frame onto the current. Temporal reprojection is used for reservoirs temporal reuse, and for temporal filtering. Sice velocity vectors are bound to the shape generating them, small imprecision can lead to faulty reprojections of the pixels at the edges of a shapes, producing ghosting effects. To account for this, the velocity vectors are "inflated", extending them over the shape to which they belong. The inflation is acchieved by considering 2x2 tiles and picking the velocity with the highest magnitude.
 
 >[!NOTE]
-> As an alternative, we could pick the velocity of the closest fragment (smallest depth value) within the tile.
+> As an alternative, we could pick the velocity from the closest fragment (smallest depth value) within the tile.
 
 When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described in detail here: https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
 
@@ -61,7 +61,7 @@ Velocity vectors teel how a given fragment moved from frame to frame; while they
 This approach requires retrieving the local transofrm for any reflected fragment, which is not possible in the current framework. I've been trying to adapt/approximate the method to work without accessing the local transform.
 
 >[!WARNING]
-> The solution i came up with seems to (kinda) work, but it's still unclear how to deal with rough reflections.
+> The solution i came up with seems to (kinda) work, but it's still unclear how to deal with rough reflections. 
 
 
 #### Downscaling
