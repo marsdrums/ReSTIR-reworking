@@ -120,5 +120,5 @@ Random pixels are sampled from the Previous-frame composited image. The random d
 
 # Compositing
 
-![](./images/compositing.png)
+![](./images/composite.png)
 
