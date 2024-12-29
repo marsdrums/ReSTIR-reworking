@@ -90,25 +90,18 @@ The result of the previous frame is reprojected onto the current frame and used 
 
 # ReSTIR
 
-<figure>
-  <img src="./images/direct.png" alt="Direct lighting">
-  <figcaption>Direct lighting</figcaption>
-</figure>
+Direct lighting
+![](./images/direct.png)
 
-<figure>
-  <img src="./images/diffuse.png" alt="Indirect diffuse">
-  <figcaption>Indirect diffuse</figcaption>
-</figure>
+Indirect diffuse
+![](./images/diffuse.png)
 
-<figure>
-  <img src="./images/reflections.png" alt="Indirect specular">
-  <figcaption>Indirect specular</figcaption>
-</figure>
+Indirect specular
+![](./images/reflections.png)
 
-<figure>
-  <img src="./images/composite.png" alt="Composited frame">
-  <figcaption>Composited frame</figcaption>
-</figure>
+Composited frame
+![](./images/composite.png)
+
 
 
 ## Diffuse
