@@ -31,12 +31,9 @@ The "gi" pass relies on many inputs; some of them are the render targets, wheter
 
 #### Velocity inflation and disocclusion weights
 
-Velocity vectors are used to temporally reproject data from the previous frame onto the current frame. Temporal reprojection serves two key purposes: enabling the temporal reuse of reservoirs and supporting temporal filtering. Since velocity vectors are tied to the geometry that generates them, even minor inaccuracies can result in faulty reprojections at shape edges, leading to ghosting artifacts.
+Velocity vectors are used to temporally reproject data from the previous frame onto the current frame. Temporal reprojection serves two key purposes: enabling the temporal reuse of reservoirs and supporting temporal filtering. 
 
-To mitigate this, velocity vectors are "inflated," extending them over the shape they belong to. This inflation is achieved by examining 2x2 tiles and selecting the velocity vector with the highest magnitude within each tile.
-
->[!NOTE]
-> Alternatively, the velocity vector could be chosen based on the closest fragment (i.e., the fragment with the smallest depth value) within the tile.
+Since velocity vectors are tied to the geometry that generates them, even minor inaccuracies can result in faulty reprojections at shape edges, leading to ghosting artifacts. To mitigate this, velocity vectors are "inflated," extending them over the shape they belong to. This inflation is achieved by examining 2x2 tiles and selecting the velocity vector of the closest fragment in the tile.
 
 When objects move, new fragment may be disoccluded and appear on screen for the first time. To account for disoccluded fragments, a weight is assigned to each fragment representing how relieable is each velocity vector. Such computation is performed considering the fragment's velocity vectors, and the previous velocity vectors (the method is described in detail here: https://www.elopezr.com/temporal-aa-and-the-quest-for-the-holy-trail/).
 
@@ -121,7 +118,7 @@ The indirect diffuse computation starts by gathering color samples. The gatherin
 
 #### Gathering samples from the viewport
 
-Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and any pixel has the same propability of being sampled. If the sampled pixel is on the empty background of the rendered image, it's discarded.
+Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and all pixels have the same propability of being sampled. If the sampled pixel is in the background, it's discarded.
 
 >[!NOTE]
 > We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on in the ReSTIR process. Moreover, the distribution of the samples within the hemisphere is supposed to be uniform, therefore, any points
