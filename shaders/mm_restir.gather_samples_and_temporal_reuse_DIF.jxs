@@ -368,9 +368,9 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-	int M = 15;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
-	int J = 30;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
-	int K = 15;//20; //num of samples from selected (brightest) pixels
+	int M = 32;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
+	int J = 32;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
+	int K = 0;//20; //num of samples from selected (brightest) pixels
 
 	int sample_index;
 	vec2 sample_uv;
@@ -540,7 +540,7 @@ void main(void) {
 		if(!shadowRay(this_s, test_s, seed)){
 			reservoir.w = 0.0;
 		} else {
-			float p_hat = luminance(get_radiance(this_s, test_s));// * (this_s.depth + 1);
+			float p_hat = luminance( get_radiance(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		}
 
@@ -551,7 +551,7 @@ void main(void) {
 		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
 			reservoir.w = 0.0;
 		} else {
-			p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
+			p_hat = luminance( get_radiance_for_env(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		}
 	}

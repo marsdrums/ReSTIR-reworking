@@ -140,7 +140,7 @@ void main(void) {
 
 		//inalColor = clamp(finalColor, BoxMin, BoxMax);
 
-		outCol.rgb = mix( p.col, c.col, c.weight );
+		outCol.rgb = mix( p.col, c.col, c.weight);
 		//outCol.rgb = mix( p.col, c.col, 0.001 );
 	
 	} else {

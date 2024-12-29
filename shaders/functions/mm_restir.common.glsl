@@ -235,7 +235,7 @@ float GGXVNDFPdf(float NoH, float NoV, float roughness)
     float G1 = SmithG(NoV, roughness*roughness);
     return (D * G1) / max(0.00001, 4.0f * NoV);
 }
-
+/*
 vec3 get_specular_radiance(in sample this_s, in sample test_s){
 
 
@@ -272,12 +272,66 @@ vec3 get_specular_radiance(in sample this_s, in sample test_s){
 	float PDF = GGXVNDFPdf(NoH, NoV, this_s.rou);
 
 	//return 0.3*spe*test_s.col / (PDF*this_s.rou*this_s.rou);
-	return F*G*test_s.col;
+	return spe*test_s.col/PDF;
 	//return spe*test_s.col;
 
 	//return test_s.col*spe*(this_s.rou);
 
 }
+*/
+vec3 get_specular_radiance(in sample this_s, in sample test_s){
+
+	vec3 diff = test_s.pos - this_s.pos;
+	float dist2 = dot(diff,diff);
+	float dist = sqrt(dist2);
+
+	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
+
+  	vec3 L = diff / dist;
+ 	vec3 V = -this_s.view;
+	vec3 H = normalize(V + L); 
+
+	float NoV = clamp(dot(this_s.nor, V), 0.001, 1.0);
+	float NoL = clamp(dot(this_s.nor, L), 0.001, 1.0);
+
+	float NoH = clamp(dot(this_s.nor, H), 0.001, 1.0);
+	float HoV = clamp(dot(H, V), 0.001, 1.0);
+
+    float alpha_sqr = this_s.rou * this_s.rou;
+
+//Masking function
+	float NoV_sqr = NoV*NoV;
+	float lambdaV = (-1.0 + sqrt(alpha_sqr * (1.0 - NoV_sqr) / NoV_sqr + 1.0)) * 0.5;
+	float G1 = 1.0 / (1.0 + lambdaV);
+
+//Height Correlated Masking-shadowing function
+	float NoL_sqr = NoL*NoL;
+	float lambdaL = (-1.0 + sqrt(alpha_sqr * (1.0 - NoL_sqr) / NoL_sqr + 1.0)) * 0.5;
+	float G2 = 1.0 / (1.0 + lambdaV + lambdaL);
+
+
+//Fresnel
+   	//float c2 = HoV * HoV;
+   	//vec3 n2_k2 = this_s.nor * this_s.nor + F0 * F0;
+   	//vec3 nc2 = 2.0 * this_s.nor * HoV;
+
+   	//vec3 rs_a = n2_k2 + c2;
+   	//vec3 rp_a = n2_k2 * c2 + 1.0;
+   	//vec3 rs = (rs_a - nc2) / (rs_a + nc2); //spolarized
+   	//vec3 rp = (rp_a - nc2) / (rp_a + nc2); //ppolarized
+
+   	//vec3 F = 0.5 * (rs + rp);
+   	vec3 F = F_schlick(HoV, F0);
+    
+    //Estimator
+    //Fresnel * Shadowing
+    //Much simpler than brdf * costheta / pdf heh
+    vec3 estimator = F * (G2 / G1);
+
+    //Output
+    return estimator * test_s.col;
+}
+
 
 float get_pdf(in sample this_s, in sample test_s){
 
@@ -322,49 +376,39 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 	float NoH = clamp(dot(this_s.nor, H), 0.001, 1.0);
 	float HoV = clamp(dot(H, V), 0.001, 1.0);
 
-	float G = G_Smith(NoV, NoL, this_s.rou);
-	
-	float D = D_GGX(NoH, this_s.rou);
-	//float divisor = D_GGX(1, this_s.rou);
-	
-	//float D = ggx_ndf_0_1(NoH, this_s.rou);
-	
-	vec3 F = F_schlick(HoV, F0);
+    float alpha_sqr = this_s.rou * this_s.rou;
 
-	vec3 spe = (F * D * G) / ( max(0.001, NoV) * max(0.001, NoL) * 4.0);
+//Masking function
+	float NoV_sqr = NoV*NoV;
+	float lambdaV = (-1.0 + sqrt(alpha_sqr * (1.0 - NoV_sqr) / NoV_sqr + 1.0)) * 0.5;
+	float G1 = 1.0 / (1.0 + lambdaV);
 
-	//calc PDF (from https://www.shadertoy.com/view/Dtl3WS)
-	float PDF = GGXVNDFPdf(NoH, NoV, this_s.rou);
+//Height Correlated Masking-shadowing function
+	float NoL_sqr = NoL*NoL;
+	float lambdaL = (-1.0 + sqrt(alpha_sqr * (1.0 - NoL_sqr) / NoL_sqr + 1.0)) * 0.5;
+	float G2 = 1.0 / (1.0 + lambdaV + lambdaL);
 
-	//return 0.3*spe*test_s.col / (PDF*this_s.rou*this_s.rou);
-	//return F*G*test_s.col;
-	//return spe*test_s.col;
-	//return test_s.col;
-	return spe*test_s.col/PDF;
 
-	//return test_s.col*spe*(this_s.rou);
-/*
-	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
+//Fresnel
+   	//float c2 = HoV * HoV;
+   	//vec3 n2_k2 = this_s.nor * this_s.nor + F0 * F0;
+   	//vec3 nc2 = 2.0 * this_s.nor * HoV;
 
-	vec3 V = -this_s.view;
-  	vec3 L = test_s.nor;
-	vec3 H = normalize(V + L); //half vector
+   	//vec3 rs_a = n2_k2 + c2;
+   	//vec3 rp_a = n2_k2 * c2 + 1.0;
+   	//vec3 rs = (rs_a - nc2) / (rs_a + nc2); //spolarized
+   	//vec3 rp = (rp_a - nc2) / (rp_a + nc2); //ppolarized
 
-	//compute dot products
-	float	HdotV = saturate(dot(H, V));
-	float 	NdotV = saturate(dot(this_s.nor, V)); //avoid dividing by 0
-	float 	NdotL = saturate(dot(this_s.nor, L));
-	float   NdotH = saturate(dot(this_s.nor, H));
-	//float   HdotL = saturate(dot(H, L));
+   	//vec3 F = 0.5 * (rs + rp);
+   	vec3 F = F_schlick(HoV, F0);
+    
+    //Estimator
+    //Fresnel * Shadowing
+    //Much simpler than brdf * costheta / pdf heh
+    vec3 estimator = F * (G2 / G1);
 
-	vec3 	F  	= fresnelSchlickRoughness(HdotV, F0, this_s.rou); //compute fresnel
-	float	NDF = DistributionGGX(NdotH, this_s.rou); //compute NDF term
-	float 	G   = GeometrySmith(NdotV, NdotL, this_s.rou); //compute G term   
-	vec3 	spe = (NDF*G*F)/(4.*NdotV*NdotL+0.001); 
-
-	float pdf = NDF * NdotH / (4.0 * HdotV + 0.001) + 0.01;
-	return	spe*NdotL*test_s.col/pdf;
-*/
+    //Output
+    return estimator * test_s.col;
 }
 
 vec4 updateReservoir(vec4 reservoir, float lightToSample, float weight, float c, uint seed, in vec3 candidate_dir, out vec3 best_dir)

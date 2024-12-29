@@ -9,8 +9,9 @@
 	<param name="albTex" type="int" default="6" filter="nearest" />
 	<param name="environmentMap" type="int" default="7" filter="nearest" />
 	<param name="depthsTex" type="int" default="8" />
-	<param name="stbn_uvec2Tex" type="int" default="9" flter="nearest" />
-	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="9" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+	<param name="occTex" type="int" default="9" />
+	<param name="stbn_uvec2Tex" type="int" default="10" flter="nearest" />
+	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="10" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
 	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
@@ -42,6 +43,7 @@
 		<bind param="albTex" program="fp" />
 		<bind param="environmentMap" program="fp" />
 		<bind param="depthsTex" program="fp" />
+		<bind param="occTex" program="fp" />
 		<bind param="stbn_uvec2Tex" program="fp" />
 		<bind param="prevMVP" program="fp" />
 		<bind param="farClip" program="fp" />
@@ -282,13 +284,14 @@ void main(void) {
 
    		ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
    		float index = float(frame)*float(num_samples);
+   		float occ = texelFetch(occTex, ivec2(jit_in.uv)).r;
 
 		for(int i = 0; i < num_samples; i++){
 
 			float tile_selector = mod(index + float(i), 64.0);
 			ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
 			vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
-			vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03, 0);
+			vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ, 0);
 
    			disk = TBN * disk;
    			disk += this_s.pos;

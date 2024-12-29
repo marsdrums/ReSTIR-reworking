@@ -80,6 +80,11 @@
             <input subpass="VELOCITY_WEIGHT" />
         </subpass>
 
+        <subpass name="VELOCITY_WEIGHT_half_inflated" file="mm_restir.inflate_velocity.jxs" inputs="2" outputs="1" type="float16">
+            <input subpass="VELOCITY_WEIGHT_half" />
+            <input subpass="NORMALS_half"/>
+        </subpass>
+
         <subpass name="IMAGE" file="mm_restir.past_frame_reprojection.jxs" inputs="3" outputs="1" type="float32">
             <input source="COLOR"/>
             <input subpass="composite_fdbk" history="1" />
@@ -114,11 +119,22 @@
             <input subpass="VELOCITY_ref_WEIGHT" />
         </subpass>
 
+        <subpass name="OCCLUSION" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
+            <input source="NORMALS"/>
+            <input source="DEPTHPEEL" />
+            <input subpass="VIEWPOS" />
+        </subpass>
+
+        <subpass name="OCCLUSION_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="char">
+            <input subpass="dummy_half" />
+            <input subpass="OCCLUSION" />
+        </subpass>
+
 
         <subpass name="REF_gather_temporal" file="mm_restir.gather_samples_and_temporal_reuse_REF.jxs" inputs="10" outputs="3" >
             <input subpass="IMAGE_half" />
             <input subpass="NORMALS_half" />
-            <input subpass="VELOCITY_WEIGHT_half" />
+            <input subpass="VELOCITY_WEIGHT_half_inflated" />
             <input subpass="VIEWPOS_half" />
             <input subpass="REF_gather_temporal_fdbk0" history="1" />
             <input subpass="REF_gather_temporal_fdbk1" history="1" />
@@ -143,7 +159,7 @@
             <input subpass="REF_gather_temporal" output="1" />
             <input subpass="IMAGE_half" />
             <input subpass="NORMALS_half" />
-            <input subpass="VELOCITY_WEIGHT_half" />
+            <input subpass="VELOCITY_WEIGHT_half_inflated" />
             <input subpass="VIEWPOS_half" />
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
@@ -236,6 +252,7 @@
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
             <input subpass="DEPTHPEEL_half" />
+            <input subpass="OCCLUSION_half" />
         </subpass>
 
         <subpass name="DIF_spatial_2" file="mm_restir.spatial_reuse_2nd_DIF.jxs" inputs="8" outputs="2" type="float32">
@@ -248,6 +265,7 @@
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
             <input subpass="DEPTHPEEL_half" />
+            <input subpass="OCCLUSION_half" />
         </subpass>
 
         <subpass name="clamp_reservoir_1" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32" >
@@ -262,12 +280,6 @@
 
         <subpass name="clamp_reservoir_2" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32">
             <input subpass="random_reservoir_permutation" />
-        </subpass>
-
-        <subpass name="OCCLUSION" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
-            <input source="NORMALS"/>
-            <input source="DEPTHPEEL" />
-            <input subpass="VIEWPOS" />
         </subpass>
 
         <subpass name="DIF_resolve" file="mm_restir.resolve_DIF.jxs" inputs="9" outputs="1" type="float32">
