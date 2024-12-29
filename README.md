@@ -90,16 +90,16 @@ The result of the previous frame is reprojected onto the current frame and used 
 
 # ReSTIR
 
-Direct lighting
+Direct lighting____________________
 ![](./images/direct.png)
 
-Indirect diffuse
+Indirect diffuse___________________
 ![](./images/diffuse.png)
 
-Indirect specular
+Indirect specular__________________
 ![](./images/reflections.png)
 
-Composited frame
+Composited frame___________________
 ![](./images/composite.png)
 
 
