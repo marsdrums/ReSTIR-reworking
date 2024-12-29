@@ -90,11 +90,10 @@ The result of the previous frame is reprojected onto the current frame and used 
 
 # ReSTIR
 
-![Direct lighting](./images/direct.png)
-![Indirect diffuse](./images/diffuse.png)
-![Indirect specular](./images/reflections.png)
-![Composited frame](./images/composite.png)
-
+![](./images/direct.png "Direct lighting")
+![](./images/diffuse.png "Indirect diffuse")
+![](./images/reflections.png "Indirect specular")
+![](./images/composite.png "Composited frame")
 
 ## Diffuse
 
