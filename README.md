@@ -88,9 +88,14 @@ The result of the previous frame is reprojected onto the current frame and used 
 >[!NOTE]
 > Reprojecting reflections allows for inter-reflections. The result isn't physically accurate, because reflections are striclty view dependent. Still, with metallic objects, non-correct inter-reflections look better than no inter-reflection...
 
-# Diffuse
+# ReSTIR
 
+![](./images/direct.png)
 ![](./images/diffuse.png)
+![](./images/reflections.png)
+![](./images/composite.png)
+
+## Diffuse
 
 The indirect diffuse computation follows these main steps:
 
@@ -101,24 +106,20 @@ The indirect diffuse computation follows these main steps:
 - ReSTIR resolve (full-res)
 - Temporal filtering (full-res)
 
-## Sample gathering (half-res)
+### Sample gathering (half-res)
 
 The indirect diffuse computation starts by gathering color samples. The gathering is performed in three ways:
 
-### Gathering samples from the viewport
+#### Gathering samples from the viewport
 
 Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and any pixel has the same propability of being sampled. If the sampled pixel is on the empty background of the rendered image, it's discarded.
 
 >[!NOTE]
 > We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on in the ReSTIR process. Moreover, the distribution of the samples within the hemisphere is supposed to be uniform, therefore, any points
 
-### Gathering samples from the a selection of brightest pixels
+#### Gathering samples from the a selection of brightest pixels
 
-# Reflections
+## Reflections
 
-![](./images/reflections.png)
-
-# Compositing
-
-![](./images/composite.png)
+## Compositing
 
