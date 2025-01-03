@@ -68,7 +68,7 @@ This approach requires retrieving the local transform for each reflected fragmen
 Each render target undergoes a downscaling process, reducing its texture size by half. These half-size render targets are utilized during sample collection and reservoir reuse. Downscaling is achieved by randomly selecting one pixel within a 2x2 tile. The same pixel is chosen across all render targets within the tile.
 
 >[!NOTE]
-> I experimented with several strategies for downsampling the render targets. Initially, I consistently chose the top-left pixel within each tile (and it's so in the currently released version of the pass FX). While functional, this resulted in noticeable jagged edges along shapes. Another approach involved averaging the pixel values within each tile (ensuring normal vectors were re-normalized), but this adversely affected ray-marching during depth comparisons. Randomly selecting a pixel within the 2x2 tile proved to be the most effective method. It enhances sample variance and acts as a form of "downscaled TAA" when the image undergoes temporal filtering.
+> I experimented with several strategies for downsampling the render targets. Initially, I consistently chose the top-left pixel within each tile (and so it is in the currently released version of the pass FX). While functional, this resulted in noticeable jagged edges along shapes. Another approach involved averaging the pixel values within each tile (ensuring normal vectors were re-normalized), but this adversely affected ray-marching during depth comparisons. Randomly selecting a pixel within the 2x2 tile proved to be the most effective method. It enhances sample variance and acts as a form of "downscaled TAA" when the image undergoes temporal filtering.
 
 #### Environment map
 
@@ -117,14 +117,14 @@ The indirect diffuse computation follows these main steps:
 
 The indirect diffuse computation starts by gathering color samples. The gathering is performed in three ways:
 
-#### Gathering samples from the viewport
+#### 1) Gathering samples from the viewport
 
 Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and all pixels have the same propability of being sampled. If the sampled pixel is in the background, it's discarded.
 
 >[!NOTE]
 > We could ray-trace from the G-Buffer using an NDF (hemisphere sampling or cosine-weighted) to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on.
 
-#### Gathering samples from the a selection of the brightest pixels
+#### 2) Gathering samples from the a selection of the brightest pixels
 
 To increase the chances of gathering significant (bright) samples, i'm performing a selection of the brightest pixels prior to sampling. The selection is performed by comparing four pixels within 2x2 tiles, and retrieving the brighntess and thexture coordinates of the brightest pixels. The output texture is then downscaled by a factor of 2. The process is repeated several times, ending with a selection of a handful of very bright pixels.
 ( shaders: restir.calc_uv_and_luma.jxs, and restir.find_brightest_pixel.jxs )
@@ -135,12 +135,61 @@ To increase the chances of gathering significant (bright) samples, i'm performin
 >[!NOTE]
 > Pixel brightness is evaluated computing the length of the color vector. 
 
-#### Gathering samples from the environment map
+#### 3) Gathering samples from the environment map
 
 Random pixels are samples from an environment map. The samples are taken by shooting uniformely distributed rays within the normal-oriented hemisphere. Once again, no ray tracing operation is performed to compute occlusion, as visibility checks are postponed. The environment texture has been mipmapped prior to sampling, and the samples used for the indirect diffuse component are taken from the second mip level (LoD = 1). Althoug incorrect for rigorous path tracing, sampling from a higher mip level reduces noise significanly, and speeds up convergence.
 
 >[!NOTE]
 > Sampling directions are uniformely distributed within the normal-oriented hemisphere and generated using with noise. As the original ReSTIR paper suggests, i'm not importance-sampling directions (e.g. using cosine-weighted sampling). It may be worth trying other random generation strategies, such as blue noise or low-discrepancy sequences to see if convergence speed increases.
+
+#### Weighting and reservoir filling the reservois
+
+Once a sample is taked, the first step consists in computing radiance (assuming the sample is visible). Radiance is computed considering samples's intensity and direction (with respect to surface normal), surface albedo, and the PDF choosen for sampling:
+
+```glsl
+// compute radiance for a sample taken from the viewport
+vec3 get_radiance(in sample this_s, in sample test_s){
+
+	//compute view-space light direction
+	vec3 diff = test_s.pos - this_s.pos;
+	vec3 dir = normalize(diff);
+
+	//compute lambert
+	float lambert = max(0.0, dot(this_s.nor, dir));
+	float PDF = 1 / (2*M_PI);
+	return this_s.alb * lambert * test_s.col / PDF;										
+}
+
+// compute radiance for a sample taken from the environment map
+vec3 get_radiance_for_env(in sample this_s, in sample test_s){
+
+	// test_s.nor holds the samplign direction in case of environment sampling
+	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
+	float PDF = 1 / (2*M_PI);
+	return this_s.alb * lambert * test_s.col / PDF;							
+}
+```
+
+Once radiance has been computed, a weight is assigned the sample:
+```glsl
+[...]
+p_hat = luminance( get_radiance(this_s, test_s) );
+[...]
+```
+The weighting function (here called luminance) computes weighting as:
+```glsl
+float luminance(vec3 x){ return length(x); }
+```
+
+After weighting, the sample is inserted into the reservoir. Reservoirs contain 4 elements, and are stored as 4-component vectors for simplicity:
+- reservoir.x = sum of the weights; the weight of each sample is added to the total weight of the reservoir.
+- reservoir.y = index of the best candidate sample; the reservoir holds the index of the most significant sample.
+- reservoir.z = number of samples contained in the reservoir.
+- reservoir.w = weight if the reservoir; careful handling of this values makes math happy.
+
+
+Each sample, is collected into a reservoir. Reservoir are stored as 4-component vectors and they hold the following things:
+- The reservoir'
 
 
 ## Reflections
