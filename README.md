@@ -25,13 +25,15 @@ L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf
 $$
 
 There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the sum of the light contributions, we can estimate the solution to the rendering equation.
-The problem with this approach, is that of all the taken samples, few of them are "important", as many of them won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
+The problem with this approach, is that of all the taken samples, not all of them are "important", as many won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
 
 Importance sampling is about shooting rays where it really matters.
 
 There are two ways to (statistichally) know if a certain light direction is important:
 - the BRDF (or BSDF) of the surface being shaded
 - knowing where the light sources are located in respect to the point being shaded
+
+#### Importance sample the BxDF 
 
 Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component of these two scenarios:
 ![](./images/lambert.png)
@@ -45,7 +47,7 @@ When shooting rays in a certain PDF, extra care must be taken: we're sampling so
 // compute diffuse component for uniform PDF
 
 float lambert = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = 1 / (2*M_PI); //Uniform sampling PDF
+float PDF = 1 / (2*M_PI); //Uniform sampling PDF weight
 vec3 diffuse_radiance = albedo * lambert * light_color / PDF;										
 ```
 
@@ -53,7 +55,7 @@ vec3 diffuse_radiance = albedo * lambert * light_color / PDF;
 // compute diffuse component for cosine-weighted PDF
 
 float cosine = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = cosine / M_PI; //Uniform sampling PDF weight
+float PDF = cosine / M_PI; //cosine-weighted PDF weight
 vec3 diffuse_radiance = albedo * cosine * light_color / PDF;										
 ```
 >[!NOTE]
@@ -67,14 +69,28 @@ float PDF = cosine / M_PI; //cosine-weighted PDF weight
 vec3 diffuse_radiance = M_PI * albedo * light_color;										
 ```
 
+As long as we account for certain direction being sampled more often than others, any PDF covering the hemisphere makes the rendering equation converge. Still, some distriubutions make the render converge faster.
 
+#### Importance sampling light sources
 
-### The problem
+If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling not only about sampling more often the directions that inherently carry more energy (because of the BxDF), but also about directing rays towards the most significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. It's not only about sorting light sources by instensity, becuase
 
-Computing indirect illumination requires solving this:
+Here is where the reservoirs enter the scene, and more specifically RIS (Re-sampled Importance Sampling).
 
-There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples. Averaging the sum of the light contributions, we can estimate the solution to the rendering equation.
-The problem with this approach, is that of all the taken samples, few of them are "important", as many of them won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to spend rays where it really matters. But we're back at square zero, because to know where we should shoot our rays at, we would need to know the solution to the rendering equation.
+## Resampled Importance Sampling
+
+The basic idea is if you have a very large pool of low-quality samples, you can intelligently take a subset of this large pool to get a smaller set of much better quality samples.
+
+Algorithmically, this means:
+
+1) First, use a cheap, or naive, algorithm to generate a large number of samples 𝑆𝑖
+2) Second, (possibly using different weights) pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗
+3) Use samples 𝑅𝑗 for your rendering.
+
+This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
+ and picking a subset of them. (I.e., every 𝑅𝑗 is also a sample 𝑆𝑖)
+
+(Refer to these link for an in-depth explaination: https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
 ## Anatomy of the "gi" pass
 
