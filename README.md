@@ -53,7 +53,7 @@ vec3 diffuse_radiance = albedo * lambert * light_color / PDF;
 // compute diffuse component for cosine-weighted PDF
 
 float cosine = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = cosine / M_PI; //Uniform sampling PDF
+float PDF = cosine / M_PI; //Uniform sampling PDF weight
 vec3 diffuse_radiance = albedo * cosine * light_color / PDF;										
 ```
 >[!NOTE]
@@ -62,7 +62,7 @@ vec3 diffuse_radiance = albedo * cosine * light_color / PDF;
 // compute diffuse component for cosine-weighted PDF
 
 float cosine = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = cosine / M_PI; //Uniform sampling PDF
+float PDF = cosine / M_PI; //cosine-weighted PDF weight
 //albedo * cosine * light_color / PDF;	
 vec3 diffuse_radiance = M_PI * albedo * light_color;										
 ```
