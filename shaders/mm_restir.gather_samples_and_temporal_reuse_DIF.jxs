@@ -368,9 +368,9 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-	int M = 32;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
-	int J = 32;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
-	int K = 0;//20; //num of samples from selected (brightest) pixels
+	int M = 30;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
+	int J = 30;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
+	int K = 30;//20; //num of samples from selected (brightest) pixels
 
 	int sample_index;
 	vec2 sample_uv;

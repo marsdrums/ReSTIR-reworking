@@ -46,6 +46,45 @@ uniform sampler2DRect tex0;
 uniform float scale;
 uniform int width;
 void main(void) {
+/*
+	vec4 reservoir = texelFetch(tex0, ivec2(jit_in.uv));
+	float MIN = 999999999;
+	float MAX = -999999999;
+	float weight;
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(-width, -width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(+0, -width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(+width, -width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(-width, +0)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(+width, +0)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(-width, +width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(+0, +width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+
+	weight = texelFetch(tex0, ivec2(jit_in.uv) + ivec2(+width, +width)).w;
+	MIN = min(MIN, weight);
+	MAX = max(MAX, weight);
+*/
+
 
 	vec4 reservoir = texelFetch(tex0, ivec2(jit_in.uv));
 
@@ -61,7 +100,7 @@ void main(void) {
 
 
 	outColor.rgb = reservoir.xyz;
-	outColor.a = min(maximum, reservoir.w);
+	outColor.a = min(reservoir.w, maximum*1.5);
 }
 ]]>
 </program>

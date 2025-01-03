@@ -353,22 +353,22 @@ void main(void) {
 
 		test_s = get_sample(int(reservoir.y));
 
-		//if(!shadowRay(this_s, test_s, seed)){
-		//	reservoir.w = 0.0;
-		//} else {
+		if(!shadowRay(this_s, test_s, seed)){
+			reservoir.w = 0.0;
+		} else {
 			p_hat = luminance( get_radiance(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		//}	
+		}	
 
 	} else {
 		test_s = get_environment_sample(best_dir);
 
-		//if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
-		//	reservoir.w = 0.0;
-		//} else {
+		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+			reservoir.w = 0.0;
+		} else {
 			p_hat = luminance( get_radiance_for_env(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		//}	
+		}	
 	}
 
 	outReservoir = reservoir;

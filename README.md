@@ -113,6 +113,7 @@ The indirect diffuse computation follows these main steps:
 - Temporal filtering (full-res)
 
 ### Sample gathering (half-res)
+( shader: restir.gather_samples_and_temporal_reuse_DIF.jxs )
 
 The indirect diffuse computation starts by gathering color samples. The gathering is performed in three ways:
 
@@ -121,9 +122,26 @@ The indirect diffuse computation starts by gathering color samples. The gatherin
 Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and all pixels have the same propability of being sampled. If the sampled pixel is in the background, it's discarded.
 
 >[!NOTE]
-> We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on in the ReSTIR process. Moreover, the distribution of the samples within the hemisphere is supposed to be uniform, therefore, any points
+> We could ray-trace from the G-Buffer using an NDF (hemisphere sampling or cosine-weighted) to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on.
 
-#### Gathering samples from the a selection of brightest pixels
+#### Gathering samples from the a selection of the brightest pixels
+
+To increase the chances of gathering significant (bright) samples, i'm performing a selection of the brightest pixels prior to sampling. The selection is performed by comparing four pixels within 2x2 tiles, and retrieving the brighntess and thexture coordinates of the brightest pixels. The output texture is then downscaled by a factor of 2. The process is repeated several times, ending with a selection of a handful of very bright pixels.
+( shaders: restir.calc_uv_and_luma.jxs, and restir.find_brightest_pixel.jxs )
+
+>[!NOTE]
+> We can't just use these bright pixels as sampling source because potentially they might be occluded, and therefore not contribute to illumination.
+
+>[!NOTE]
+> Pixel brightness is evaluated computing the length of the color vector. 
+
+#### Gathering samples from the environment map
+
+Random pixels are samples from an environment map. The samples are taken by shooting uniformely distributed rays within the normal-oriented hemisphere. Once again, no ray tracing operation is performed to compute occlusion, as visibility checks are postponed. The environment texture has been mipmapped prior to sampling, and the samples used for the indirect diffuse component are taken from the second mip level (LoD = 1). Althoug incorrect for rigorous path tracing, sampling from a higher mip level reduces noise significanly, and speeds up convergence.
+
+>[!NOTE]
+> Sampling directions are uniformely distributed within the normal-oriented hemisphere and generated using with noise. As the original ReSTIR paper suggests, i'm not importance-sampling directions (e.g. using cosine-weighted sampling). It may be worth trying other random generation strategies, such as blue noise or low-discrepancy sequences to see if convergence speed increases.
+
 
 ## Reflections
 

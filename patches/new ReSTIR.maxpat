@@ -14,6 +14,19 @@
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
+					"fontsize" : 19.93574510981469,
+					"id" : "obj-145",
+					"linecount" : 3,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 413.0, -96.0, 232.0, 73.0 ],
+					"text" : "Random reservoir permutatino has been disabled!!"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"attr" : "enable",
 					"id" : "obj-144",
 					"maxclass" : "attrui",
@@ -1703,7 +1716,7 @@
 			}
 , 			{
 				"box" : 				{
-					"attr" : "enable",
+					"attr" : "width_2",
 					"id" : "obj-39",
 					"maxclass" : "attrui",
 					"numinlets" : 1,

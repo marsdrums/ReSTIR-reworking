@@ -11,7 +11,7 @@
 	<param name="uv" type="vec2" state="TEXCOORD" />
 	<param name="frame" type="int" state="FRAME" />
 	<param name="texDim" type="vec2" state="TEXDIM0" />
-	<param name="width" type="float" default="3" />
+	<param name="width" type="float" default="5" />
 	<language name="glsl" version="1.5">
 		<bind param="reservoirTex" program="fp" />
 		<bind param="tex1" program="fp" />
@@ -77,8 +77,10 @@ void main(void) {
 					this_nor_depth.w != 1 ?
 					permuted_uv : ivec2(jit_in.uv);
 
-	outColor0 = texelFetch(reservoirTex, permuted_uv);
-	outColor1 = texelFetch(tex1, permuted_uv);		
+	//outColor0 = texelFetch(reservoirTex, permuted_uv);
+	//outColor1 = texelFetch(tex1, permuted_uv);		
+	outColor0 = texelFetch(reservoirTex, ivec2(jit_in.uv));
+	outColor1 = texelFetch(tex1, ivec2(jit_in.uv));		
 
 
 }
