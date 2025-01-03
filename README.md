@@ -73,12 +73,19 @@ As long as we account for certain direction being sampled more often than others
 
 #### Importance sampling light sources
 
-If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,0,0).
+If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
 
-Here is where RIS (Re-sampled Importance Sampling) enters the scene.
+Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N /dot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples is exactly like the target function (it shares the same profile when plotted). So, importance sampling is about selecting a PDF that matches as closely as possible the target function. 
+
+![](./images/samples_from_PDF.png)
+
+This is easy for the diffuse lobe, because it's known a priori. But what if we need to importance sample something else, like some light sources we don't know anything about. In other words, how can we devise a PDF that matches a target function we don't know anything about??
+
+Here is where RIS (Resampled Importance Sampling) enters the scene.
 
 ## Resampled Importance Sampling (RIS)
 
+RIS is a method to 
 RIS is a method to gather a bunch of bad samples and mathemagically turn them into good samples. By bad samples, i mean samples that don't carry a lot of energy, and by good samples i mean the contrary. To illustrate how RIS works, let's make a simplified example. Let's say we're looking at a led strip, and each individual led can be more or less intense:
 
 ![](./images/RIS1.png)
