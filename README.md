@@ -12,6 +12,49 @@ Indirect lighting is split into two components: diffuse and specular lighting. E
 
 The "gi" pass also considers the BRDF (Bidirectional Reflectance Distribution Function) of the illuminated surfaces. It integrates with jit.gl.pbr to access surface roughness and metalness values. These surface properties influence the lighting calculations, affecting both the light transport functions and the sampling distributions used for generating rays.
 
+## Some necessary info about importance resampling, reservoirs and ReSTIR
+
+Here i'm collecting some concepts fundamental for understanding the ReSTIR algorithm and some useful links to go deeper into the subject.
+
+### Importance sampling
+
+We all know this guy:
+$$
+L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) d\omega_i
+$$
+
+There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the sum of the light contributions, we can estimate the solution to the rendering equation.
+The problem with this approach, is that of all the taken samples, few of them are "important", as many of them won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
+
+Importance sampling is about shooting rays where it really matters.
+
+There are two ways to (statistichally) know if a certain light direction is important:
+- the BRDF (or BSDF) of the surface being shaded
+- knowing where the light sources are located in respect to the point being shaded
+
+Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component of these two scenarios:
+![](./images/lambert.png)
+The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere to "hopefully" find important light sources. This is called cosine-weighted importance sampling
+![](./images/cosine.png)
+
+When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs, but many other exists. The PDF tells "how likely" it is to shoot a ray in a certain direction.
+When shooting rays in a certain PDF, extra care must be taken: we're sampling some directions more often than others, therefore we must compensate for such a preference. In other words, if a direction is sampled less often, that sample must count more. For a given PDF, the light coming from a direction within that PDF must be divided by how likely it is to pick that specific direction. For example, this is how the lambertian component is computed in a ray-traced context:
+
+```glsl
+// compute diffuse component
+
+float lambert = max(0.0, normal, light_direction)); //cosine N.L
+float PDF = 1 / (2*M_PI); //Uniform sampling PDF
+vec3 diffuse_radiance = albedo * lambert * light_color / PDF;										
+```
+
+### The problem
+
+Computing indirect illumination requires solving this:
+
+There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples. Averaging the sum of the light contributions, we can estimate the solution to the rendering equation.
+The problem with this approach, is that of all the taken samples, few of them are "important", as many of them won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to spend rays where it really matters. But we're back at square zero, because to know where we should shoot our rays at, we would need to know the solution to the rendering equation.
+
 ## Anatomy of the "gi" pass
 
 ![](./images/algorithm-scheme.png)
@@ -192,9 +235,9 @@ To add a new sample into the reservoir, the function "update_reservoir" is calle
 
 ```glsl
 vec4 updateReservoir(	vec4 reservoir, /*reservoir to update*/
-						float lightToSample, /*rindex of the sample to add to the reservoir*/
+						float lightToSample, /*index of the sample to add to the reservoir*/
 						float weight, /*sample's weight*/
-						float c, /*length of the reservoir that's been merged with this reservoir*/
+						float c, /*length of the reservoir that's been merged with this reservoir (=1 in case of a single sample) */
 						uint seed, /*RNG seed*/
 						in vec3 candidate_dir, /*sample's direction (in case of samples from the environment) */
 						out vec3 best_dir /*direction of the most significant sample (in case of samples from the environment) */
