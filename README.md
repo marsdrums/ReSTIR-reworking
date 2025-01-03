@@ -73,11 +73,17 @@ As long as we account for certain direction being sampled more often than others
 
 #### Importance sampling light sources
 
-If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling not only about sampling more often the directions that inherently carry more energy (because of the BxDF), but also about directing rays towards the most significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,0,0).
+If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,0,0).
 
 Here is where RIS (Re-sampled Importance Sampling) enters the scene.
 
-## Resampled Importance Sampling
+## Resampled Importance Sampling (RIS)
+
+RIS is a method to gather a bunch of bad samples and mathemagically turn them into good samples. By bad samples, i mean samples that don't carry a lot of energy, and by good samples i mean the contrary. To illustrate how RIS works, let's make a simplified example. Let's say we're looking at a led strip, and each individual led can be more or less intense:
+
+![](./images/RIS1.png)
+
+The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. If we 
 
 The basic idea is if you have a very large pool of low-quality samples, you can intelligently take a subset of this large pool to get a smaller set of much better quality samples.
 
