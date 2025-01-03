@@ -142,7 +142,7 @@ Random pixels are samples from an environment map. The samples are taken by shoo
 >[!NOTE]
 > Sampling directions are uniformely distributed within the normal-oriented hemisphere and generated using with noise. As the original ReSTIR paper suggests, i'm not importance-sampling directions (e.g. using cosine-weighted sampling). It may be worth trying other random generation strategies, such as blue noise or low-discrepancy sequences to see if convergence speed increases.
 
-#### Weighting and reservoir filling the reservois
+#### Sample weighting and reservoir filling
 
 Once a sample is taked, the first step consists in computing radiance (assuming the sample is visible). Radiance is computed considering samples's intensity and direction (with respect to surface normal), surface albedo, and the PDF choosen for sampling:
 
@@ -185,11 +185,41 @@ After weighting, the sample is inserted into the reservoir. Reservoirs contain 4
 - reservoir.x = sum of the weights; the weight of each sample is added to the total weight of the reservoir.
 - reservoir.y = index of the best candidate sample; the reservoir holds the index of the most significant sample.
 - reservoir.z = number of samples contained in the reservoir.
-- reservoir.w = weight if the reservoir; careful handling of this values makes math happy.
+- reservoir.w = reservoir's; careful handling of this values makes math happy.
 
+At the beginning of the samples collecting process, the reservoirs are initialized to vec4(0.0);
+To add a new sample into the reservoir, the function "update_reservoir" is called. This function is used both to add single samples to the reservoir and for merging two reservoirs together:
 
-Each sample, is collected into a reservoir. Reservoir are stored as 4-component vectors and they hold the following things:
-- The reservoir'
+```glsl
+vec4 updateReservoir(	vec4 reservoir, /*reservoir to update*/
+						float lightToSample, /*rindex of the sample to add to the reservoir*/
+						float weight, /*sample's weight*/
+						float c, /*length of the reservoir that's been merged with this reservoir*/
+						uint seed, /*RNG seed*/
+						in vec3 candidate_dir, /*sample's direction (in case of samples from the environment) */
+						out vec3 best_dir /*direction of the most significant sample (in case of samples from the environment) */
+					)
+{
+
+	// Algorithm 2 of ReSTIR paper
+	reservoir.x = reservoir.x + weight; // r.w_sum
+	reservoir.z = reservoir.z + c; // r.M
+
+	// change the favourite sample using a weighted probability
+	if (RandomFloat01(seed) < weight / reservoir.x) {
+
+		if(lightToSample >= 0){ //If the sample comes from the viewport
+			reservoir.y = lightToSample; // r.y
+		} 		
+		else{ //If the sample comes from the environment map
+			reservoir.y = -1;
+			best_dir = candidate_dir;
+		}
+	}	
+	return reservoir;
+}
+```
+
 
 
 ## Reflections
