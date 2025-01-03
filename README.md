@@ -19,6 +19,7 @@ Here i'm collecting some concepts fundamental for understanding the ReSTIR algor
 ### Importance sampling
 
 We all know this guy:
+
 $$
 L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) d\omega_i
 $$
