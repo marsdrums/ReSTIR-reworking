@@ -41,12 +41,32 @@ When we decide how to shoot rays, we refer to a PDF - probability density functi
 When shooting rays in a certain PDF, extra care must be taken: we're sampling some directions more often than others, therefore we must compensate for such a preference. In other words, if a direction is sampled less often, that sample must count more. For a given PDF, the light coming from a direction within that PDF must be divided by how likely it is to pick that specific direction. For example, this is how the lambertian component is computed in a ray-traced context:
 
 ```glsl
-// compute diffuse component
+// compute diffuse component for uniform PDF
 
 float lambert = max(0.0, normal, light_direction)); //cosine N.L
 float PDF = 1 / (2*M_PI); //Uniform sampling PDF
 vec3 diffuse_radiance = albedo * lambert * light_color / PDF;										
 ```
+
+```glsl
+// compute diffuse component for cosine-weighted PDF
+
+float cosine = max(0.0, normal, light_direction)); //cosine N.L
+float PDF = cosine / M_PI; //Uniform sampling PDF
+vec3 diffuse_radiance = albedo * cosine * light_color / PDF;										
+```
+>[!NOTE]
+> Some PDFs, like cosine-weighted, are choosen also because the cosine term cancels out nicely:
+```glsl
+// compute diffuse component for cosine-weighted PDF
+
+float cosine = max(0.0, normal, light_direction)); //cosine N.L
+float PDF = cosine / M_PI; //Uniform sampling PDF
+//albedo * cosine * light_color / PDF;	
+vec3 diffuse_radiance = M_PI * albedo * light_color;										
+```
+
+
 
 ### The problem
 
