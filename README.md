@@ -73,9 +73,9 @@ As long as we account for certain direction being sampled more often than others
 
 #### Importance sampling light sources
 
-If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling not only about sampling more often the directions that inherently carry more energy (because of the BxDF), but also about directing rays towards the most significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. It's not only about sorting light sources by instensity, becuase
+If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling not only about sampling more often the directions that inherently carry more energy (because of the BxDF), but also about directing rays towards the most significant light sources more often. This is a bit more problematic, because to know exactly where the important directions are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,0,0).
 
-Here is where the reservoirs enter the scene, and more specifically RIS (Re-sampled Importance Sampling).
+Here is where RIS (Re-sampled Importance Sampling) enters the scene.
 
 ## Resampled Importance Sampling
 
@@ -91,6 +91,12 @@ This is called “resampling” because you pick your final samples 𝑅𝑗 by 
  and picking a subset of them. (I.e., every 𝑅𝑗 is also a sample 𝑆𝑖)
 
 (Refer to these link for an in-depth explaination: https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
+
+With the RIS mechanics, we can perform a cheap estimate of a sample importance, and perform costly ray tracing operations only for samples that we know must be somehow relevant.
+
+## ReSTIR (Reservoir-based Spatio-Temporal Importance Resampling)
+
+
 
 ## Anatomy of the "gi" pass
 
