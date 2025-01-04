@@ -116,7 +116,7 @@ To importance sample this target function, samples should be drawn in proportion
 
 But we know the led strip intensity because we're omniscent; what if we don't know anything about it but still need to find a PDF that matches the target function. This is how to do it with RIS:
 
-1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. 
+1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. (Any initial PDF can be used; for the sake of simplicity, i'm using a uniform samples distribution)
 
 ![](./images/RIS3.png)
 
@@ -139,6 +139,8 @@ Using math symbols:
 4) $y \sim w$ -> draw sample y proportional to w
 5) $e = f(y)$ -> compute radiance e from sample y
 6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF(x)}$ -> scale radiance by average samples' weight divided by this sample's weight in the complex PDF
+
+Where does the performance advantage lie in generating many samples and then resampling them? The benefit comes from the ability to simplify certain aspects when assigning weights to the samples. For example, instead of factoring in visibility (which involves expensive ray-tracing operations), weights can be estimated based on the unshadowed contribution of the samples. Resampling enables a "coarse" selection of the most promising candidates, allowing the rendering part of the algorithm to focus sampling efforts where it (should) matter the most.
 
 (Refer to these links for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
