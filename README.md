@@ -12,11 +12,11 @@ Indirect lighting is split into two components: diffuse and specular lighting. E
 
 The "gi" pass also considers the BRDF (Bidirectional Reflectance Distribution Function) of the illuminated surfaces. It integrates with jit.gl.pbr to access surface roughness and metalness values. These surface properties influence the lighting calculations, affecting both the light transport functions and the sampling distributions used for generating rays.
 
-## Some necessary info and annoying math about importance resampling, reservoirs and ReSTIR
+# Some necessary info and annoying math about importance resampling, reservoirs and ReSTIR
 
 Here i'm collecting some concepts fundamental for understanding the ReSTIR algorithm and some useful links to go deeper into the subject. I try to keep it short, but i'm sure i'll fail.
 
-### Importance sampling
+## Importance sampling
 
 We all know this guy:
 
@@ -24,7 +24,7 @@ $$
 L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) d\omega_i
 $$
 
-There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the sum of the light contributions, we can estimate the solution to the rendering equation.
+There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the light contributions, we can estimate the solution to the rendering equation.
 The problem with this approach, is that of all the taken samples, not all of them are "important", as many won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
 
 Importance sampling is about shooting rays where it really matters.
@@ -33,11 +33,11 @@ There are two ways to (statistichally) know if a certain light direction is impo
 - the BRDF (or BSDF) of the surface being shaded
 - knowing where the light sources are located in respect to the point being shaded
 
-#### Importance sample the BxDF 
+### Importance sample the BxDF 
 
 Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component of these two scenarios:
 ![](./images/lambert.png)
-The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere to "hopefully" find important light sources. This is called cosine-weighted importance sampling
+The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere where it is more likely to find important light sources. This is called cosine-weighted importance sampling
 ![](./images/cosine.png)
 
 When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs. The PDF tells "how likely" it is to shoot a ray in a certain direction.
@@ -71,7 +71,7 @@ vec3 diffuse_radiance = M_PI * albedo * light_color;
 
 As long as we account for certain direction being sampled more often than others, any PDF covering the hemisphere makes the rendering equation converge. Still, some distriubutions make the render converge faster than others.
 
-#### Importance sampling light sources
+### Importance sampling light sources
 
 If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve the rendering equation first, bringing us back at square zero. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
 
@@ -92,7 +92,7 @@ The basic idea is if you have a very large pool of low-quality samples, you can 
 Algorithmically, this means:
 
 1) First, use a cheap, or naive, algorithm to generate a large number of samples 𝑆𝑖
-2) Second, pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗
+2) Second, pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗 assigning a weight to each of them to "score" how important they are
 3) Use samples 𝑅𝑗 for your rendering.
 
 This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
