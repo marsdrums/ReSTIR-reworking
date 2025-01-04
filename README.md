@@ -62,12 +62,12 @@ float PDF = cosine / M_PI; //cosine-weighted PDF weight
 vec3 diffuse_radiance = albedo * cosine * light_color / PDF;										
 ```
 >[!NOTE]
-> Some PDFs, like cosine-weighted, are choosen also because the cosine term cancels out nicely:
+> Cosine-weighted PDF is cool also because the cosine term cancels out nicely:
 ```glsl
 // compute diffuse component for cosine-weighted PDF
 
 float cosine = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = cosine / M_PI; //cosine-weighted PDF weight
+//PDF = cosine / M_PI; //cosine-weighted PDF weight
 //albedo * cosine * light_color / PDF;	
 vec3 diffuse_radiance = M_PI * albedo * light_color;										
 ```
