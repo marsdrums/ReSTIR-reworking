@@ -85,7 +85,7 @@ Here is where RIS (Resampled Importance Sampling) enters the scene.
 
 ## Resampled Importance Sampling (RIS)
 
-RIS is a method to create a PDF to importance sample an unknown target function.
+RIS is a method to create a PDF to importance sample an unknown target function. RIS it the foundation of the ReSTIR algorithm.
 
 The basic idea is if you have a very large pool of low-quality samples, you can intelligently take a subset of this large pool to get a smaller set of much better quality samples.
 
@@ -112,13 +112,13 @@ The graph above shows the intensity of the leds on the strip - most of the strip
 6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the facts that we're taking a limited number of samples, and makes the complex PDF coincide to the target function we're sampling.
 
 
-(Refer to these link for an in-depth explaination: 
+(Refer to these link for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
 https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
-With the RIS mechanics, we can perform a cheap estimate of a sample importance, and perform costly ray tracing operations only for samples that we know must be somehow relevant.
+With RIS, we can draw a bunch of samples using a cheap estimate of their importance, and we can than resample one of these samples with higher weighted samples are more likely to be chosen. But how exaclty can we pick a random sample using weights as propability?
 
-## ReSTIR (Reservoir-based Spatio-Temporal Importance Resampling)
+## The Reservoirs
 
 
 
