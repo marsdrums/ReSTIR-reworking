@@ -114,10 +114,10 @@ The graph above shows the intensity of the leds on the strip - most of the strip
 Using math symbols:
 
 1) $x_1, x_2, ..., x_m$ -> samples from the simple PDF (uniform)
-2) $w(x) = complexPDF(x) / simplePDF(x)$
+2) $w(x) = \frac{complexPDF(x)}{simplePDF(x)}$
 4) $y ~ w$ -> draw sample y proportional to w
 5) $e = f(y)$ -> compute radiance e from sample y
-6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF} $
+6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF}$ -> scale radiance by average sample weight divided by this sample's weight
 
 (Refer to these link for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
