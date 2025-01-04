@@ -35,7 +35,7 @@ There are two ways to (statistichally) know if a certain light direction is impo
 
 ### Importance sample the BxDF 
 
-Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component of these two scenarios:
+Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component computation in these two scenarios:
 ![](./images/lambert.png)
 The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere where it is more likely to find important light sources. This is called cosine-weighted importance sampling
 ![](./images/cosine.png)
@@ -75,11 +75,11 @@ As long as we account for certain direction being sampled more often than others
 
 If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve the rendering equation first, bringing us back at square zero. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
 
-Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N \cdot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples is exactly like the target function (it shares the same profile when plotted). So, importance sampling is about selecting a PDF that matches as closely as possible the target function (cosine-wheighted PDF in this example). 
+Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N \cdot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples must be exactly like the target function (it must share the same profile when plotted). So, importance sampling works at its best when selecting a PDF that matches as closely as possible the target function (cosine-wheighted PDF in this example). 
 
 ![](./images/samples_from_PDF.png)
 
-This is easy for the diffuse lobe, because it's known a priori. But what if we need to importance sample something else, like some light sources we don't know anything about. In other words, how can we devise a PDF that matches a target function we don't know anything about??
+This is easy for the diffuse lobe, because that's known a priori. But what if we need to importance sample something else, like some light sources we don't know anything about. In other words, how can we devise a PDF that matches a target function we don't know anything about??
 
 Here is where RIS (Resampled Importance Sampling) enters the scene.
 
@@ -111,6 +111,13 @@ The graph above shows the intensity of the leds on the strip - most of the strip
 5) The radiance emitted by the choosen sample must be divided by the weight that the sample has in the complex PDF. The division by weight compensates for some regions being sampled more often than others.
 6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the fact that we're taking a limited number of samples, and makes the complex PDF coincide with the target function we're sampling.
 
+Using math symbols:
+
+1) $x_1, x_2, ..., x_m$ -> samples from the simple PDF (uniform)
+2) $w(x) = complexPDF(x) / simplePDF(x)$
+4) $y ~ w$ -> draw sample y proportional to w
+5) $e = f(y)$ -> compute radiance e from sample y
+6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF} $
 
 (Refer to these link for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
