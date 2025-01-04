@@ -40,8 +40,8 @@ Given a certain BxDF, we know that the light direction affects the amount of lig
 The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere to "hopefully" find important light sources. This is called cosine-weighted importance sampling
 ![](./images/cosine.png)
 
-When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs, but many other exists. The PDF tells "how likely" it is to shoot a ray in a certain direction.
-When shooting rays in a certain PDF, extra care must be taken: we're sampling some directions more often than others, therefore we must compensate for such a preference. In other words, if a direction is sampled less often, that sample must count more. For a given PDF, the light coming from a direction within that PDF must be divided by how likely it is to pick that specific direction. For example, this is how the lambertian component is computed in a ray-traced context:
+When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs. The PDF tells "how likely" it is to shoot a ray in a certain direction.
+When drawing samples from a non-uniform PDF, rays tend to cluster, and some directions are sampled more often than others. To compensate for such a preference, the radiance coming from any direction must be divided by how likely it is to to pick that specific direction. For example, this is how the lambertian component is computed in a ray-traced context:
 
 ```glsl
 // compute diffuse component for uniform PDF
@@ -69,11 +69,11 @@ float PDF = cosine / M_PI; //cosine-weighted PDF weight
 vec3 diffuse_radiance = M_PI * albedo * light_color;										
 ```
 
-As long as we account for certain direction being sampled more often than others, any PDF covering the hemisphere makes the rendering equation converge. Still, some distriubutions make the render converge faster.
+As long as we account for certain direction being sampled more often than others, any PDF covering the hemisphere makes the rendering equation converge. Still, some distriubutions make the render converge faster than others.
 
 #### Importance sampling light sources
 
-If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
+If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve the rendering equation first, bringing us back at square zero. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
 
 Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N \cdot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples is exactly like the target function (it shares the same profile when plotted). So, importance sampling is about selecting a PDF that matches as closely as possible the target function (cosine-wheighted PDF in this example). 
 
@@ -92,7 +92,7 @@ The basic idea is if you have a very large pool of low-quality samples, you can 
 Algorithmically, this means:
 
 1) First, use a cheap, or naive, algorithm to generate a large number of samples 𝑆𝑖
-2) Second, (possibly using different weights) pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗
+2) Second, pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗
 3) Use samples 𝑅𝑗 for your rendering.
 
 This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
@@ -104,19 +104,20 @@ Let's make an example - let's say we're looking at a led strip, and each individ
 
 The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. We know the led strip intensity because we're omniscent, but let's say we don't know anything about it and we want to find a PDF that matches the target function. This is how to do it with RIS:
 
-1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that could match the target funcrion. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. 
+1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. 
 2) Sample the scene, and assign a weight to each sample - weighting samples can be performed in a variety of ways, but let's say we simply compute the luminance of the samples, ending with a single value representing how bright a sample is. This is the weight that the sample has in the complex PDF.
-3) Divide the weight of the sample in the target function by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will then have higher weights than darker ones.
+3) Divide the weight of the sample in the complex PDF by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will have higher weights than darker ones.
 4) Here starts the "rendering" part: Pick a random sample from the complex PDF - higher weighted samples are more likely to be choosen. A sample with weight = 3 is three times more likely to be choosen than a sample of weight = 1. 
 5) The radiance emitted by the choosen sample must be divided by the weight that the sample has in the complex PDF. The division by weight compensates for some regions being sampled more often than others.
-6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the facts that we're taking a limited number of samples, and makes the complex PDF coincide to the target function we're sampling.
+6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the fact that we're taking a limited number of samples, and makes the complex PDF coincide with the target function we're sampling.
 
 
 (Refer to these link for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
 https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
-With RIS, we can draw a bunch of samples using a cheap estimate of their importance, and we can than resample one of these samples with higher weighted samples are more likely to be chosen. But how exaclty can we pick a random sample using weights as propability?
+With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample one of these samples with higher weighted samples being more likely to be chosen. 
+But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
 
