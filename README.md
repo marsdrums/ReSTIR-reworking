@@ -12,9 +12,9 @@ Indirect lighting is split into two components: diffuse and specular lighting. E
 
 The "gi" pass also considers the BRDF (Bidirectional Reflectance Distribution Function) of the illuminated surfaces. It integrates with jit.gl.pbr to access surface roughness and metalness values. These surface properties influence the lighting calculations, affecting both the light transport functions and the sampling distributions used for generating rays.
 
-## Some necessary info about importance resampling, reservoirs and ReSTIR
+## Some necessary info and annoying math about importance resampling, reservoirs and ReSTIR
 
-Here i'm collecting some concepts fundamental for understanding the ReSTIR algorithm and some useful links to go deeper into the subject.
+Here i'm collecting some concepts fundamental for understanding the ReSTIR algorithm and some useful links to go deeper into the subject. I try to keep it short, but i'm sure i'll fail.
 
 ### Importance sampling
 
