@@ -31,7 +31,7 @@ Importance sampling is about shooting rays where it really matters.
 
 There are two ways to (statistichally) know if a certain light direction is important:
 - the BRDF (or BSDF) of the surface being shaded
-- knowing where the light sources are located in respect to the point being shaded
+- The relative position of light sources with respect to the point being shaded.
 
 ### Importance sample the BxDF 
 
@@ -43,8 +43,9 @@ The point on the left reflects more light than the point on the right, because t
 
 ![](./images/cosine.png)
 
-When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs. The PDF tells "how likely" it is to shoot a ray in a certain direction.
-When drawing samples from a non-uniform PDF, rays tend to cluster, and some directions are sampled more often than others. To compensate for such a preference, the radiance coming from any direction must be divided by how likely it is to to pick that specific direction. For example, this is how the lambertian component is computed in a ray-traced context:
+When determining how to shoot rays, we rely on a PDF (probability density function). Examples of PDFs include uniform sampling and cosine-weighted sampling. The PDF defines the likelihood of shooting a ray in a specific direction.
+
+When samples are drawn from a non-uniform PDF, rays tend to cluster, with some directions being sampled more frequently than others. To account for this bias, the radiance from any given direction must be divided by the likelihood of selecting that direction. For example, this is how the lambertian component is computed in a ray-traced context:
 
 ```glsl
 // compute diffuse component for uniform PDF
@@ -76,21 +77,21 @@ As long as we account for certain direction being sampled more often than others
 
 ### Importance sampling light sources
 
-If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve the rendering equation first, bringing us back at square zero. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
+If there’s a bright light source on the right and nothing on the left, shooting a ray to the left is essentially wasted effort. Importance sampling is not just about favoring directions that inherently carry more energy due to the BxDF; it’s also about directing rays more frequently toward significant light sources. However, this introduces additional challenges. To precisely identify the most relevant light sources, we would first need to solve the rendering equation—putting us back to square one. Simply ranking light sources by intensity isn’t sufficient either, as some light sources may be occluded or their contributions diminished by albedo modulation. There’s no universal way to determine which light sources are most important (e.g., an intense blue light source with values like (0,0,50) contributes nothing to a surface with an albedo of (1,1,0)).
 
-Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N \cdot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples must be exactly like the target function (it must share the same profile when plotted). So, importance sampling works at its best when selecting a PDF that matches as closely as possible the target function (cosine-wheighted PDF in this example). 
+Let’s revisit why importance sampling the BxDF works. Considering the diffuse component of the BRDF, we know that light sources directly above a surface contribute more to its illumination than those at shallow angles. This relationship is well-defined because there is an analytical function— 𝑁⋅𝐿 —that describes light intensity as a function of angle. To importance sample the diffuse BRDF, we can generate random samples proportional to this function. The target function is known, and the PDF we use for generating samples must mirror the shape of the target function (they must have the same profile when plotted). Therefore, importance sampling is most effective when the chosen PDF closely matches the target function, as in the case of using a cosine-weighted PDF for the diffuse BRDF.
 
 ![](./images/samples_from_PDF.png)
 
-This is easy for the diffuse lobe, because that's known a priori. But what if we need to importance sample something else, like some light sources we don't know anything about. In other words, how can we devise a PDF that matches a target function we don't know anything about??
+This is straightforward for the diffuse lobe, as it is known in advance. But what if we need to importance sample something less predictable, like light sources we know little to nothing about? In other words, how can we create a PDF that aligns with a target function we have no prior knowledge of?
 
-Here is where RIS (Resampled Importance Sampling) enters the scene.
+This is where Resampled Importance Sampling (RIS) comes into play.
 
 ## Resampled Importance Sampling (RIS)
 
-RIS is a method to create a PDF to importance sample an unknown target function. RIS it the foundation of the ReSTIR algorithm.
+Resampled Importance Sampling (RIS) is a method for constructing a PDF to importance sample an unknown target function. It forms the basis of the ReSTIR algorithm.
 
-The basic idea is if you have a very large pool of low-quality samples, you can intelligently take a subset of this large pool to get a smaller set of much better quality samples.
+The core concept is that, given a very large pool of low-quality samples, you can intelligently select a smaller subset from this pool to produce a set of higher-quality samples.
 
 Algorithmically, this means:
 
@@ -101,13 +102,15 @@ Algorithmically, this means:
 This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
  and picking a subset of them. (I.e., every 𝑅𝑗 is also a sample 𝑆𝑖)
 
-Let's make an example - let's say we're looking at a led strip, and each individual led can be more or less intense:
+Example:
+
+Imagine you are rendering a scene with an LED strip, where each individual LED varies in intensity. Here’s how RIS would approach this problem:
 
 ![](./images/RIS1.png)
 
-The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. 
+The graph above illustrates the intensity of the LEDs along the strip—most of the strip is dark, with only a bright region on the left.
 
-If we want to importance sample this target functions, samples must be drawn proportionally to the target function, and might look something like this:
+To importance sample this target function, samples should be drawn in proportion to its intensity, resulting in a distribution that might look like this:
 
 ![](./images/RIS2.png)
 
@@ -122,6 +125,9 @@ But we know the led strip intensity because we're omniscent; what if we don't kn
 ![](./images/RIS4.png)
 
 3) Divide the weight of the sample in the complex PDF by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will have higher weights than darker ones.
+
+![](./images/RIS5.png)
+
 4) Here starts the "rendering" part: Pick a random sample from the complex PDF - higher weighted samples are more likely to be choosen. A sample with weight = 3 is three times more likely to be choosen than a sample of weight = 1. 
 5) The radiance emitted by the choosen sample must be divided by the weight that the sample has in the complex PDF. The division by weight compensates for some regions being sampled more often than others.
 6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the fact that we're taking a limited number of samples, and makes the complex PDF coincide with the target function we're sampling.
@@ -132,7 +138,7 @@ Using math symbols:
 2) $w(x) = \frac{complexPDF(x)}{simplePDF(x)}$ -> assign a weight to sample x
 4) $y \sim w$ -> draw sample y proportional to w
 5) $e = f(y)$ -> compute radiance e from sample y
-6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF}$ -> scale radiance by average sample weight divided by this sample's weight
+6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF(x)}$ -> scale radiance by average samples' weight divided by this sample's weight in the complex PDF
 
 (Refer to these links for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
@@ -143,7 +149,14 @@ But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
 
-Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory.
+Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and fairly (uniform randomly) choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities. 
+
+A reservoir is a data structure used to perform this selection. It contains 4 things:
+
+- the sum of the weights; the weight of each sample is added to the total weight of the reservoir.
+- the index of chosen sample; the reservoir holds the index of the most significant sample.
+- the number of samples contained in the reservoir.
+- the weight of the chosen sample; careful handling of this values makes math happy.
 
 (Some useful links: 
 https://www.youtube.com/watch?v=A1iwzSew5QY , 
