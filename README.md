@@ -36,8 +36,11 @@ There are two ways to (statistichally) know if a certain light direction is impo
 ### Importance sample the BxDF 
 
 Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component computation in these two scenarios:
+
 ![](./images/lambert.png)
-The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random rays directions towards the aphex of the hemisphere where it is more likely to find important light sources. This is called cosine-weighted importance sampling
+
+The point on the left reflects more light than the point on the right, because the cosine of the angle formed by the normal vector and the light direction is smaller. Knowing this, we could concentrate the random ray directions towards the aphex of the hemisphere where it is more likely to find important light sources. This is called cosine-weighted importance sampling.
+
 ![](./images/cosine.png)
 
 When we decide how to shoot rays, we refer to a PDF - probability density function. Uniform sampling, and cosine-weighted sampling are two examples of PDFs. The PDF tells "how likely" it is to shoot a ray in a certain direction.
