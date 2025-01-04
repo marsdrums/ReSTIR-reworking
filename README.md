@@ -75,7 +75,7 @@ As long as we account for certain direction being sampled more often than others
 
 If there's a shiny light on the right, and nothing on the left, if we shoot the ray on the left that's wasted. Importance sampling is not only about sampling more often the directions that inherently carry more energy because of the BxDF, but also about directing rays towards significant light sources more often. This is a bit more problematic, because to know exactly where the important light sources are, one should solve first the rendering equation. Sorting light sources by instensity wouldn't be enough either, because some light sources might be occluded and because of albedo modulation - there's no universal way to define which light sources are important (e.g., an intense blue light like 0,0,50 does nothing to a surface of albedo 1,1,0).
 
-Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N /dot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples is exactly like the target function (it shares the same profile when plotted). So, importance sampling is about selecting a PDF that matches as closely as possible the target function. 
+Let's think again at why importance sampling the BxDF works: considering the diffuse component of the BRDF, we know that light sources right above a surface contibute more to its illumination than light sources at shallow angles. We know this because there's an analytical function describing the light intensity at any angle ( $N \cdot L$ ). To importance sample the diffuse BRDF, we can draw random samples proportional to such function. The target function is known, and the PDF we use for generating samples is exactly like the target function (it shares the same profile when plotted). So, importance sampling is about selecting a PDF that matches as closely as possible the target function (cosine-wheighted PDF in this example). 
 
 ![](./images/samples_from_PDF.png)
 
@@ -85,12 +85,7 @@ Here is where RIS (Resampled Importance Sampling) enters the scene.
 
 ## Resampled Importance Sampling (RIS)
 
-RIS is a method to 
-RIS is a method to gather a bunch of bad samples and mathemagically turn them into good samples. By bad samples, i mean samples that don't carry a lot of energy, and by good samples i mean the contrary. To illustrate how RIS works, let's make a simplified example. Let's say we're looking at a led strip, and each individual led can be more or less intense:
-
-![](./images/RIS1.png)
-
-The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. If we 
+RIS is a method to create a PDF to importance sample an unknown target function.
 
 The basic idea is if you have a very large pool of low-quality samples, you can intelligently take a subset of this large pool to get a smaller set of much better quality samples.
 
@@ -103,7 +98,23 @@ Algorithmically, this means:
 This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
  and picking a subset of them. (I.e., every 𝑅𝑗 is also a sample 𝑆𝑖)
 
-(Refer to these link for an in-depth explaination: https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
+Let's make an example - let's say we're looking at a led strip, and each individual led can be more or less intense:
+
+![](./images/RIS1.png)
+
+The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. We know the led strip intensity because we're omniscent, but let's say we don't know anything about it and we want to find a PDF that matches the target function. This is how to do it with RIS:
+
+1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that could match the target funcrion. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. 
+2) Sample the scene, and assign a weight to each sample - weighting samples can be performed in a variety of ways, but let's say we simply compute the luminance of the samples, ending with a single value representing how bright a sample is. This is the weight that the sample has in the complex PDF.
+3) Divide the weight of the sample in the target function by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will then have higher weights than darker ones.
+4) Here starts the "rendering" part: Pick a random sample from the complex PDF - higher weighted samples are more likely to be choosen. A sample with weight = 3 is three times more likely to be choosen than a sample of weight = 1. 
+5) The radiance emitted by the choosen sample must be divided by the weight that the sample has in the complex PDF. The division by weight compensates for some regions being sampled more often than others.
+6) Lastly, we need to multiply radiance by the average weight of all the samples; this compensates for the facts that we're taking a limited number of samples, and makes the complex PDF coincide to the target function we're sampling.
+
+
+(Refer to these link for an in-depth explaination: 
+https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
+https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
 With the RIS mechanics, we can perform a cheap estimate of a sample importance, and perform costly ray tracing operations only for samples that we know must be somehow relevant.
 
