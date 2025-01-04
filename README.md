@@ -140,7 +140,7 @@ Using math symbols:
 5) $e = f(y)$ -> compute radiance e from sample y
 6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF(x)}$ -> scale radiance by average samples' weight divided by this sample's weight in the complex PDF
 
-Where does the performance advantage lie in generating many samples and then resampling them? The benefit comes from the ability to simplify certain aspects when assigning weights to the samples. For example, instead of factoring in visibility (which involves expensive ray-tracing operations), weights can be estimated based on the unshadowed contribution of the samples. Resampling enables a "coarse" selection of the most promising candidates, allowing the rendering part of the algorithm to focus sampling efforts where it (should) matter the most.
+Where does the performance advantage lie in generating many samples and then resampling them? If we need to generate many samples to estimate which matter the most, can't we render from these samples directly? The benefit comes from the ability to simplify certain aspects when assigning weights to the samples. For example, instead of factoring in visibility (which involves expensive ray-tracing operations), weights can be estimated based on the unshadowed contribution of the samples. RIS enables a "coarse" selection of the most promising candidates, allowing the rendering part of the algorithm to focus sampling efforts where it (should) matter the most.
 
 (Refer to these links for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
