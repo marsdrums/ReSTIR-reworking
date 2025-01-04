@@ -66,7 +66,7 @@ vec3 diffuse_radiance = albedo * cosine * light_color / PDF;
 ```glsl
 // compute diffuse component for cosine-weighted PDF
 
-float cosine = max(0.0, normal, light_direction)); //cosine N.L
+//cosine = max(0.0, normal, light_direction)); //cosine N.L
 //PDF = cosine / M_PI; //cosine-weighted PDF weight
 //albedo * cosine * light_color / PDF;	
 vec3 diffuse_radiance = M_PI * albedo * light_color;										
