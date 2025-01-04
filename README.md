@@ -122,11 +122,11 @@ Using math symbols:
 5) $e = f(y)$ -> compute radiance e from sample y
 6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF}$ -> scale radiance by average sample weight divided by this sample's weight
 
-(Refer to these link for a clearer in-depth explaination: 
+(Refer to these links for a clearer in-depth explaination: 
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
 https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
-With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample one of these samples with higher weighted samples being more likely to be chosen. 
+With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample one of these samples, with higher weighted samples being more likely to be chosen. 
 But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
