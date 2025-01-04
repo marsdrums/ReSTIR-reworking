@@ -50,7 +50,7 @@ When drawing samples from a non-uniform PDF, rays tend to cluster, and some dire
 // compute diffuse component for uniform PDF
 
 float lambert = max(0.0, normal, light_direction)); //cosine N.L
-float PDF = 1 / (2*M_PI); //Uniform sampling PDF weight
+float PDF = 1 / M_TWOPI; //Uniform sampling PDF weight
 vec3 diffuse_radiance = albedo * lambert * light_color / PDF;										
 ```
 
