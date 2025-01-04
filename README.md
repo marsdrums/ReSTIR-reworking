@@ -95,7 +95,7 @@ The basic idea is if you have a very large pool of low-quality samples, you can 
 Algorithmically, this means:
 
 1) First, use a cheap, or naive, algorithm to generate a large number of samples 𝑆𝑖
-2) Second, pick a subset of 𝑆𝑖 to create a new, smaller set of samples 𝑅𝑗 assigning a weight to each of them to "score" how important they are
+2) Second, pick a subset of 𝑆𝑖 to create a new set of samples 𝑅𝑗 assigning a weight to each of them to "score" how important they are
 3) Use samples 𝑅𝑗 for your rendering.
 
 This is called “resampling” because you pick your final samples 𝑅𝑗 by re-evaluating weights for your earlier samples 𝑆𝑖
@@ -105,10 +105,22 @@ Let's make an example - let's say we're looking at a led strip, and each individ
 
 ![](./images/RIS1.png)
 
-The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. We know the led strip intensity because we're omniscent, but let's say we don't know anything about it and we want to find a PDF that matches the target function. This is how to do it with RIS:
+The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. 
+
+If we want to importance sample this target functions, samples might be drawn like this:
+
+![](./images/RIS2.png)
+
+But we know the led strip intensity because we're omniscent; what if we don't know anything about it but still need to find a PDF that matches the target function. This is how to do it with RIS:
 
 1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. 
+
+![](./images/RIS3.png)
+
 2) Sample the scene, and assign a weight to each sample - weighting samples can be performed in a variety of ways, but let's say we simply compute the luminance of the samples, ending with a single value representing how bright a sample is. This is the weight that the sample has in the complex PDF.
+
+![](./images/RIS4.png)
+
 3) Divide the weight of the sample in the complex PDF by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will have higher weights than darker ones.
 4) Here starts the "rendering" part: Pick a random sample from the complex PDF - higher weighted samples are more likely to be choosen. A sample with weight = 3 is three times more likely to be choosen than a sample of weight = 1. 
 5) The radiance emitted by the choosen sample must be divided by the weight that the sample has in the complex PDF. The division by weight compensates for some regions being sampled more often than others.
