@@ -107,7 +107,7 @@ Let's make an example - let's say we're looking at a led strip, and each individ
 
 The graph above shows the intensity of the leds on the strip - most of the strip is dark, except for a region on the left. 
 
-If we want to importance sample this target functions, samples might be drawn like this:
+If we want to importance sample this target functions, samples must be drawn proportionally to the target function, and might look something like this:
 
 ![](./images/RIS2.png)
 
@@ -138,10 +138,16 @@ Using math symbols:
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
 https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
-With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample one of these samples, with higher weighted samples being more likely to be chosen. 
+With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample these samples, with higher weighted samples being more likely to be selected. 
 But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
+
+Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory.
+
+(Some useful links: 
+https://www.youtube.com/watch?v=A1iwzSew5QY , 
+https://blog.demofox.org/2022/03/01/picking-fairly-from-a-list-of-unknown-size-with-reservoir-sampling/ )
 
 
 
