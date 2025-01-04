@@ -118,7 +118,7 @@ Using math symbols:
 
 1) $x_1, x_2, ..., x_m$ -> samples from the simple PDF (uniform)
 2) $w(x) = \frac{complexPDF(x)}{simplePDF(x)}$
-4) $y ~ w$ -> draw sample y proportional to w
+4) $y \sim w$ -> draw sample y proportional to w
 5) $e = f(y)$ -> compute radiance e from sample y
 6) $e_w = \frac{ \frac{1}{m} \sum_{i=1}^{m} w(x_i) }{complexPDF}$ -> scale radiance by average sample weight divided by this sample's weight
 
