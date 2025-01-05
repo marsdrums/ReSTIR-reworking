@@ -157,7 +157,7 @@ Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 item
 
 A reservoir is a data structure used to perform this selection. You can throw any number of samples into a reservoir, and perform a weighted random selection on them. 
 
-Please, refer to these links for an in-depth explanation of how reservoirs work:
+Please, refer to these links for an in-depth explanation of how reservoir sampling works:
 https://www.youtube.com/watch?v=A1iwzSew5QY , 
 https://blog.demofox.org/2022/03/01/picking-fairly-from-a-list-of-unknown-size-with-reservoir-sampling/ )
 
@@ -166,7 +166,7 @@ A reservoir contains 4 things:
 - the sum of all the weights; when a new sample is thrown into a reservoir, its weight is added to the total weight.
 - the index of the chosen sample; the reservoir holds the index of the selected sample.
 - the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1.
-- the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
+- the weight of the current sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
 
 Here’s how reservoir sampling works:
 
@@ -183,6 +183,7 @@ vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSample
 	//reservoir.x = running sum of all the weights seen so far
 	//reservoir.y = index of the current sample kept in the reservoir
 	//reservoir.z = number of samples added so far
+	//reservoir.w = weight of the current sample
 
 	reservoir.x += newSampleWeight; //add the new sample's weight to the running total of weights 
 	reservoir.z += 1; // add 1 to the number of samples thrown into the reservoir so far
@@ -190,10 +191,39 @@ vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSample
 	//perform the weighted random coin flip
 	if (RandomFloat01() < newSampleWeight / reservoir.x) {
 		reservoir.y = newSampleIndex; //substitute the old sample with the new one
+		reservoir.w = newSampleWeight; //update the weight of the current sample
 	}	
 	return reservoir;
 }									
 ```
+
+Reservoirs also have a fantastic property: they can be combined! If you have two ore more reservoirs and you want to combine them, you don't have to put all the individual samples that got processed by the reservoirs we're combining; you just have to take the current sample in each reservoir, and add it to the combined reservoir, togheter with the length of the reservoirs we're combining.
+
+```glsl
+vec4 combineReservoirs(inout vec4 reservoir, in vec4 reservoirToCombine)
+{
+	//reservoir.x = running sum of all the weights seen so far
+	//reservoir.y = index of the current sample kept in the reservoir
+	//reservoir.z = number of samples added so far
+	//reservoir.w = weight of the current sample
+
+	reservoir.x += reservoirToCombine.w * reservoirToCombine.z; //add the new sample's weight to the running total of weights scaled by how many samples are contained in reservoirToCombine
+	reservoir.z += reservoirToCombine.z; // add the length of reservoirToCombine to the total number of samples thrown into the reservoir so far
+
+	//perform the weighted random coin flip
+	if (RandomFloat01() < reservoirToCombine.w * reservoirToCombine.z / reservoir.x) {
+		reservoir.y = reservoirToCombine.y; //substitute the old sample with the new one
+		reservoir.w = reservoirToCombine.w; //update the weight of the current sample
+	}	
+	return reservoir;
+}								
+```
+
+This property of reservoirs is what makes ReSTIR possible.
+
+## ReSTIR
+
+ReSTIR is an algorithm aimed at 
 
 ## Anatomy of the "gi" pass
 
