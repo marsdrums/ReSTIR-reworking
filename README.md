@@ -168,10 +168,14 @@ A reservoir contains 4 things:
 - the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1.
 - the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
 
-This is how reservoir sampling works:
-We start with an empty reservoir, and we insert the first sample into it.
-When we throw a new sample into the reservoir, we perform a weighted random selection between the sample currently present in the reservoir, and the new sample we're adding. The weights for such a random selection are the weight of the new sample vs. the running sum of all the weights of all the samples put so far into the reservoir. So, we flip a coin, and decide if to keep the current sample, or take the new one. Wheter the coin flip favoured the old or the new sample, we add the weight of the new sample to the running total of the weights. 
-This is a GLSL-like pseudo code function to add new samples into the reservor:
+Here’s how reservoir sampling works:
+
+- Start with an empty reservoir and insert the first sample into it.
+- For each new sample, perform a weighted random selection between the sample currently in the reservoir and the new sample being added. The weights for this selection are determined by the weight of the new sample compared to the running sum of the weights of all samples processed so far.
+- Flip a "coin" (based on the weighted probabilities) to decide whether to keep the current sample in the reservoir or replace it with the new one.
+- Regardless of the outcome, add the weight of the new sample to the running total of weights.
+
+Here’s a GLSL-like pseudo-code function to integrate new samples into the reservoir:
 
 ```glsl
 vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSampleWeight)
@@ -180,8 +184,8 @@ vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSample
 	//reservoir.y = index of the current sample kept in the reservoir
 	//reservoir.z = number of samples added so far
 
-	reservoir.x = reservoir.x + weight; //add the new sample's weight to the running total of weights 
-	reservoir.z = reservoir.z + 1; // add 1 to the number of samples thrown into the reservoir so far
+	reservoir.x += newSampleWeight; //add the new sample's weight to the running total of weights 
+	reservoir.z += 1; // add 1 to the number of samples thrown into the reservoir so far
 
 	//perform the weighted random coin flip
 	if (RandomFloat01() < newSampleWeight / reservoir.x) {
