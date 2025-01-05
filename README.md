@@ -124,7 +124,7 @@ where more samples are drawn where the function in high, fewer where it's low, n
 
 ![](./images/RIS4.png)
 
-Here, spheres' radius is used to represent the sample's weight.
+Here, spheres' radius is used to represent samples' weights.
 
 3) Divide the weight of the sample in the complex PDF by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will have higher weights than darker ones.
 
@@ -233,7 +233,7 @@ This is a breakdown of how ReSTIR works:
 
 1) Gather a random sample - The sampling strategy depends on the context in which ReSTIR is used - in full fledgeg ray tracing rendering, samples are taken by raytracing the scene geometry. The PDF used for drawing these initial samples can be anything, althoug the original ReSTIR paper suggests using uniform sampling.
 
-2) Assign a weight to the sample - The weighting is performed considering the BxDF of the shaded point, its albedo value, and the sample's color (in ReSTIR used for computing direct illumination, the squared distance from the shaded point to the sample is also taken into account). Wheighting is perfomed like this:
+2) Assign a weight to the sample - The weighting is performed considering the BxDF of the shaded point, its albedo value, and the sample's color (in ReSTIR used for computing direct illumination, the squared distance from the shaded point to the sample is also taken into account). Weighting is perfomed as follows:
 
 $$
 	e = x_{alb} * f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) / PDF
