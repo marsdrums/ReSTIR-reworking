@@ -155,14 +155,14 @@ After the RIS process, we obtain a large set of weighted samples, and the next s
 
 Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and fairly (uniform randomly) choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities. 
 
-A reservoir is a data structure used to perform this selection. You can throw any number of samples into the reservoir, and perform a weighted random selection among them. A reservoir contains 4 things:
+A reservoir is a data structure used to perform this selection. You can throw any number of samples into a reservoir, and perform a weighted random selection on them. A reservoir contains 4 things:
 
 - the sum of all the weights; when a new sample is thrown into reservoir, its weight is added to the total weight of the reservoir.
 - the index of chosen sample; the reservoir holds the index of the selected sample.
 - the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1
 - the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
 
-(Some useful links: 
+Here there are two nice explanaions of how reservoir sampling works.
 https://www.youtube.com/watch?v=A1iwzSew5QY , 
 https://blog.demofox.org/2022/03/01/picking-fairly-from-a-list-of-unknown-size-with-reservoir-sampling/ )
 
