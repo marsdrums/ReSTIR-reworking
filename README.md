@@ -151,6 +151,8 @@ But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
 
+After the RIS process, we obtain a large set of weighted samples, and the next step is to perform a weighted random selection from them. However, storing such a large number of samples can be challenging. This is where reservoir sampling comes into play—a technique that allows for this type of selection without requiring significant memory or prior knowledge of the total number of samples.
+
 Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and fairly (uniform randomly) choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities. 
 
 A reservoir is a data structure used to perform this selection. You can throw any number of samples into the reservoir, and perform a weighted random selection among them. A reservoir contains 4 things:
