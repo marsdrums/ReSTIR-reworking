@@ -238,7 +238,7 @@ $$
 $$
 
 $$
-	e_w = \lVert Ra \rVert
+	e_w = \lVert e \rVert
 $$
 
 where $e$ is the radiance, $e_w$ is the samples's weight, $x$ is the shaded point, $x_{alb}$ is the albedo of the shaded point, $f_r(\mathbf{x}, \omega_o, \omega_i)$ is the BxDF of the shaded point, and $L_i(\mathbf{x}, \omega_i)$. The weight corresponds to the length of the radiance vector.
