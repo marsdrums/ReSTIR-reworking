@@ -116,7 +116,7 @@ To importance sample this target function, samples should be drawn in proportion
 
 But we know the led strip intensity because we're omniscent; what if we don't know anything about it but still need to find a PDF that matches the target function. This is how to do it with RIS:
 
-1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. (Any initial PDF can be used; for the sake of simplicity, i'm using a uniform samples distribution)
+1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. (Any initial PDF can be used; for the sake of simplicity, i'm using a uniform samples distribution in this example)
 
 ![](./images/RIS3.png)
 
@@ -146,7 +146,7 @@ Where does the performance advantage lie in generating many samples and then res
 https://www.youtube.com/watch?v=gsZiJeaMO48&t=416s , 
 https://cwyman.org/blogs/introToReSTIR/introToRIS.md.html#:~:text=Resampled%20importance%20sampling%2C%20or%20RIS,thesis%20from%20Brigham%20Young%20University. )
 
-With the magic of RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample these samples, with higher weighted samples being more likely to be selected. 
+With RIS, we can draw a bunch of random samples, compute a cheap estimate of their importance, and then resample these samples, with higher weighted samples being more likely to be selected. 
 But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
