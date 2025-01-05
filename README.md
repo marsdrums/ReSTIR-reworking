@@ -151,22 +151,45 @@ But how exaclty can we perform this weighted random selection efficiently?
 
 ## The Reservoirs
 
-After the RIS process, we obtain a large set of weighted samples, and the next step is to perform a weighted random selection from them. However, storing such a large number of samples can be challenging. This is where reservoir sampling comes into play—a technique that allows for this type of selection without requiring significant memory or prior knowledge of the total number of samples.
+After the RIS process, we obtain a large set of weighted samples, and the next step is to perform a weighted random selection from them. However, storing such a large number of samples can be challenging. This is where reservoir sampling comes into play — a technique that allows for this type of selection without requiring significant memory or prior knowledge of the total number of samples.
 
-Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and fairly (uniform randomly) choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities. 
+Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities, which is key for importance sampling. 
 
-A reservoir is a data structure used to perform this selection. You can throw any number of samples into a reservoir, and perform a weighted random selection on them. A reservoir contains 4 things:
+A reservoir is a data structure used to perform this selection. You can throw any number of samples into a reservoir, and perform a weighted random selection on them. 
 
-- the sum of all the weights; when a new sample is thrown into reservoir, its weight is added to the total weight of the reservoir.
-- the index of chosen sample; the reservoir holds the index of the selected sample.
-- the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1
-- the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
-
-Here there are two nice explanaions of how reservoir sampling works.
+Please, refer to these links for an in-depth explanation of how reservoirs work:
 https://www.youtube.com/watch?v=A1iwzSew5QY , 
 https://blog.demofox.org/2022/03/01/picking-fairly-from-a-list-of-unknown-size-with-reservoir-sampling/ )
 
+A reservoir contains 4 things:
 
+- the sum of all the weights; when a new sample is thrown into a reservoir, its weight is added to the total weight.
+- the index of the chosen sample; the reservoir holds the index of the selected sample.
+- the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1.
+- the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
+
+This is how reservoir sampling works:
+We start with an empty reservoir, and we insert the first sample into it.
+When we throw a new sample into the reservoir, we perform a weighted random selection between the sample currently present in the reservoir, and the new sample we're adding. The weights for such a random selection are the weight of the new sample vs. the running sum of all the weights of all the samples put so far into the reservoir. So, we flip a coin, and decide if to keep the current sample, or take the new one. Wheter the coin flip favoured the old or the new sample, we add the weight of the new sample to the running total of the weights. 
+This is a GLSL-like pseudo code function to add new samples into the reservor:
+
+```glsl
+vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSampleWeight)
+{
+	//reservoir.x = running sum of all the weights seen so far
+	//reservoir.y = index of the current sample kept in the reservoir
+	//reservoir.z = number of samples added so far
+
+	reservoir.x = reservoir.x + weight; //add the new sample's weight to the running total of weights 
+	reservoir.z = reservoir.z + 1; // add 1 to the number of samples thrown into the reservoir so far
+
+	//perform the weighted random coin flip
+	if (RandomFloat01() < newSampleWeight / reservoir.x) {
+		reservoir.y = newSampleIndex; //substitute the old sample with the new one
+	}	
+	return reservoir;
+}									
+```
 
 ## Anatomy of the "gi" pass
 
