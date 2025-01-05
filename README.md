@@ -124,6 +124,8 @@ where more samples are drawn where the function in high, fewer where it's low, n
 
 ![](./images/RIS4.png)
 
+Here, spheres' radius is used to represent the sample's weight.
+
 3) Divide the weight of the sample in the complex PDF by the weight of that sample in the simple PDF; being the simple PDF uniform, we divide the weight by 1, which leaves us with simply the weight of the sample in the complex PDF. Brighter samples will have higher weights than darker ones.
 
 ![](./images/RIS5.png)
