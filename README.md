@@ -178,7 +178,7 @@ Here’s how reservoir sampling works:
 Here’s a GLSL-like pseudo-code function to integrate new samples into the reservoir:
 
 ```glsl
-vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSampleWeight)
+void updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSampleWeight)
 {
 	//reservoir.x = running sum of all the weights seen so far
 	//reservoir.y = index of the current sample kept in the reservoir
@@ -193,14 +193,13 @@ vec4 updateReservoir(inout vec4 reservoir, float newSampleIndex, float newSample
 		reservoir.y = newSampleIndex; //substitute the old sample with the new one
 		reservoir.w = newSampleWeight; //update the weight of the current sample
 	}	
-	return reservoir;
 }									
 ```
 
 Reservoirs also have a fantastic property: they can be combined! If you have two ore more reservoirs and you want to combine them, you don't have to put all the individual samples that got processed by the reservoirs we're combining; you just have to take the current sample in each reservoir, and add it to the combined reservoir, togheter with the length of the reservoirs we're combining.
 
 ```glsl
-vec4 combineReservoirs(inout vec4 reservoir, in vec4 reservoirToCombine)
+void combineReservoirs(inout vec4 reservoir, in vec4 reservoirToCombine)
 {
 	//reservoir.x = running sum of all the weights seen so far
 	//reservoir.y = index of the current sample kept in the reservoir
@@ -215,7 +214,6 @@ vec4 combineReservoirs(inout vec4 reservoir, in vec4 reservoirToCombine)
 		reservoir.y = reservoirToCombine.y; //substitute the old sample with the new one
 		reservoir.w = reservoirToCombine.w; //update the weight of the current sample
 	}	
-	return reservoir;
 }								
 ```
 
