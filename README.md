@@ -230,13 +230,35 @@ ReSTIR is an algorithm aimed at finding very quickly the most important light sa
 This is a breakdown of how ReSTIR works:
 
 1) Gather a random sample - The sampling strategy depends on the context in which ReSTIR is used - in full fledgeg ray tracing rendering, samples are taken by raytracing the scene geometry. The PDF used for drawing these initial samples can be anything, althoug the original ReSTIR paper suggests using uniform sampling.
+
 2) Assign a weight to the sample - The weighting is performed considering the BxDF of the shaded point, its albedo value, and the sample's color (in ReSTIR used for computing direct illumination, the squared distance from the shaded point to the sample is also taken into account). Wheighting is perfomed like this:
 
 $$
-	weight = \lVert P_{albedo} * f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) \rVert
+	e = x_{alb} * f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) / PDF
 $$
 
-where $P_{albedo}$ is the albedo of the shaded point, $f_r(\mathbf{x}, \omega_o, \omega_i)$ is the BxDF of the shaded point, and $L_i(\mathbf{x}, \omega_i)$.
+$$
+	e_w = \lVert Ra \rVert
+$$
+
+where $e$ is the radiance, $e_w$ is the samples's weight, $x$ is the shaded point, $x_{alb}$ is the albedo of the shaded point, $f_r(\mathbf{x}, \omega_o, \omega_i)$ is the BxDF of the shaded point, and $L_i(\mathbf{x}, \omega_i)$. The weight corresponds to the length of the radiance vector.
+
+3) Once the weight has been computed, the sample is inserted into the a reservoir. Each pixel contains a reservoir storing the candidate samples. Repeat steps from 1 to 3 if you need to increase the initial pool of samples. Typically only one sample is taken because ray tracing operations are by far the most costly.
+
+4) Temporal reuse of the reservoirs - the current reservoir is combined with the previous frame reservoir. Combining reservoirs temporally allows for iteratively refining the sampling PDF. Before combining the current and previous reservoir, the previous reservoir must be validated: a shadow ray is traced from the shaded point to the sample stored in the previous reservoir to check if it's still visible in the current frame. If it is, the reservoirs are combined, otherwise, the previous frame reservoir is discarded.
+
+5) Spatial reuse of the reservoirs - neighboring reservoirs might contain just-as-good samples as the current reservoir; This reservoir is then combined with the neighboring reservoirs, under the assumption that given the closness of the reservoirs, the candidate samples stored by neighbors are visible from the shaded point.
+
+6) Resolve the reservoir - The sample that "survided" reservoir sampling is used to render illumination for the shaded point.
+
+The strength of ReSTIR lies in its ability to gather a large number of samples at the cost of just 2 ray tracing operations: one ray to gather the sample, one ray to validare the history samples. To put it into numbers:
+
+- frame 1: gather 1 sample, no history available, add 8 (8x1) samples from neighbors = 9 samples
+- frame 2: gather 1 sample, 9 samples available from history, add 80 (8x10) samples from neighbors = 90 samples
+- frame 3: gather 1 sample, 90 samples available from history, add 728 (8x21) samples from neighbors = 819 samples
+- frame 4: gather 1 sample, 819 samples available from history, add 6560 (8x820) samples from neighbors = 7380 samples
+
+and so on... In the time span of just 4 frames, at the cost of 2 rays per pixel, we can actually select among 7380 importance sampled samples for rendering (CRAZY!!).
 
 
 ## Anatomy of the "gi" pass
