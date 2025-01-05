@@ -120,7 +120,7 @@ But we know the led strip intensity because we're omniscent; what if we don't kn
 
 ![](./images/RIS3.png)
 
-2) Sample the scene, and assign a weight to each sample - weighting samples can be performed in a variety of ways, but let's say we simply compute the luminance of the samples, ending with a single value representing how bright a sample is. This is the weight that the sample has in the complex PDF.
+2) Sample the scene, and assign a weight to each sample - weighting samples can be performed in a variety of ways, but let's say we simply compute the luminance of the samples, ending with a single value representing how bright a sample is. This brightness value is a weight assigned to the samples in the complex PDF.
 
 ![](./images/RIS4.png)
 
@@ -153,12 +153,12 @@ But how exaclty can we perform this weighted random selection efficiently?
 
 Reservoir Sampling is a randomized algorithm for selecting a sample of 𝑘 items from a larger population of 𝑁 items, where 𝑁 is unknown or too large to fit into memory. Reservoir sampling allows you to stream a list of data and fairly (uniform randomly) choose an item from the list as you go. This also works when you want to choose items in the list with different probabilities. 
 
-A reservoir is a data structure used to perform this selection. It contains 4 things:
+A reservoir is a data structure used to perform this selection. You can throw any number of samples into the reservoir, and perform a weighted random selection among them. A reservoir contains 4 things:
 
-- the sum of the weights; the weight of each sample is added to the total weight of the reservoir.
-- the index of chosen sample; the reservoir holds the index of the most significant sample.
-- the number of samples contained in the reservoir.
-- the weight of the chosen sample; careful handling of this values makes math happy.
+- the sum of all the weights; when a new sample is thrown into reservoir, its weight is added to the total weight of the reservoir.
+- the index of chosen sample; the reservoir holds the index of the selected sample.
+- the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1
+- the weight of the chosen sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
 
 (Some useful links: 
 https://www.youtube.com/watch?v=A1iwzSew5QY , 
