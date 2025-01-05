@@ -219,9 +219,25 @@ void combineReservoirs(inout vec4 reservoir, in vec4 reservoirToCombine)
 
 This property of reservoirs is what makes ReSTIR possible.
 
-## ReSTIR
+## ReSTIR (Reservoir-based Spatio-Temporal Importance Resampling)
 
-ReSTIR is an algorithm aimed at 
+ReSTIR is an algorithm aimed at finding very quickly the most important light samples for each rendered pixel.
+
+- "Importance Resampling" because it's based on RIS.
+- "Reservoir-based" because it uses reservoir sampling to perform weighted random selection of the samples selected by RIS.
+- "Spatio-Temporal" because it combines reservoirs from neighboring pixels (spatial) and from past frames (temporal) to select among a massive amount of candidate samples very quickly.
+
+This is a breakdown of how ReSTIR works:
+
+1) Gather a random sample - The sampling strategy depends on the context in which ReSTIR is used - in full fledgeg ray tracing rendering, samples are taken by raytracing the scene geometry. The PDF used for drawing these initial samples can be anything, althoug the original ReSTIR paper suggests using uniform sampling.
+2) Assign a weight to the sample - The weighting is performed considering the BxDF of the shaded point, its albedo value, and the sample's color (in ReSTIR used for computing direct illumination, the squared distance from the shaded point to the sample is also taken into account). Wheighting is perfomed like this:
+
+$$
+	weight = || P_albedo * f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) ||
+$$
+
+where $P_albedo$ is the albedo of the shaded point, $f_r(\mathbf{x}, \omega_o, \omega_i)$ is the BxDF of the shaded point, and $L_i(\mathbf{x}, \omega_i)$.
+
 
 ## Anatomy of the "gi" pass
 
