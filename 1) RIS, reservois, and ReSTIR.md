@@ -13,7 +13,7 @@ The following pages describe the current state of the "gi" pass FX. To highlight
 > Notes are used to indicate the "reasons why" i made certain choices.
 
 >[!WARNING]
-> Warnings are used to indicate parts of the algorithm which are not currently working, or some things that may be worth trying in my opinion.
+> Warnings are used to indicate parts of the algorithm which are currently not working, or some things that may be worth trying in my opinion.
 
 By the end of this guide/article/whatever, i'll summarize in the same place all the critical aspects that need further working.
 
