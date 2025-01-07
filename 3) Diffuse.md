@@ -148,7 +148,7 @@ In case the sample comes from the viewport, the index of the sample is >= 0; if 
 >[!WARNING]
 > I'd like to rework this, and try to figure out a way to index environment samples using a single (negative) value. This would allow to save memory (we wouldn't have to pass another texture around, because everything would have been packed into a vec4 reservoir).
 
-## Temporal reuse of the reservoirs
+## Temporal reuse of the reservoirs (half-res)
 
 After the samples have been collected, the resevoirs from the previous frame are merged with the current reservoirs. A relative motion between the camera and the objects in the scene may have occured from one frame to the next, so reservoirs are temporally reprojected using velocity vectors. If reprojection fails (whether because the fragment was outside the viewport at the previous frame, or because it has just been disoccluded), the reservoir merging is skipped.
 Prior to merging, the samples in the previous-frame reservoirs are re-weighted to update their "importance".
@@ -162,8 +162,6 @@ After merging, the reservoirs are validated. A "shadow ray" is shot from the sha
 > There's no reason to use fine-stepped ray marching, since we're not interested in what the ray intersects and where, but just if there's something between the shaded pixel and the sample.
 
 Shadow rays are traced using the functions in restir.raytrace.glsl.
-
-After validation, the reservoir are output moving on to the next phase.
 
 ## Reservoir weight clamping (half-res)
 
@@ -204,7 +202,7 @@ The sampling pattern follows a spatio-temporal blue noise distribution, ensuring
 Neighboring reservoirs are excluded from merging with the current reservoir if their normals differ significantly or if they are too far apart.
 
 ```glsl
-if(	dot(this_s.nor, candidateNorDepth.xyz) < 0.95 ||  length(this_s.pos - candidatePos) > 0.3 ) continue;
+if(dot(this_s.nor, candidateNorDepth.xyz) < 0.95 || length(this_s.pos - candidatePos) > 0.3) continue;
 ```
 
 The disk's search radius is influenced by the occlusion map—highly occluded fragments use a smaller radius compared to unoccluded ones.
@@ -234,7 +232,7 @@ The resolve pass transforms these samples into actual colors, which are rendered
 
 For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) uses four reservoirs to determine the color of each pixel. A normal-oriented disk is drawn again, randomly accessing four reservoirs, including the current one. The search radius is once again influenced by the occlusion map and the reservoirs are chosen following a spatio-temporal blue noise distribution. Unlike the spatial reuse pass, neighboring reservoirs with differing normals or positions are not outright rejected. Instead, a weight is assigned to each sample based on orientation and positional differences. Before averaging the colors, each contribution is scaled by its respective weight.
 
-The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositiong stage.
+The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
 
 ## Temporal filtering (full-res)
 
@@ -266,4 +264,4 @@ p.col = clamp(p.col, BoxMin, BoxMax);
 outCol.rgb = mix( p.col, c.col, c.weight );
 ```
 
-After temporal filtering, the diffuse component is reade to be composited with the specular component.
+After temporal filtering, the diffuse component is ready to be composited with the specular component.
