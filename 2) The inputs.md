@@ -62,6 +62,9 @@ The "gi" pass can access the environment map provided via jit.gl.environment. Wh
 
 A short range ambient occlusion is computed ray marching through the 4 depth layers. Ambient occlusion is computed by taking 8 samples per frame within the hemisphere above the surface; Samples are distributed using spatio-temporal blue noise. The AO isn't applied directly to the rendered image; rather, it's used to control the reservoir spatial reuse, and the ReSTIR resolve pass. More about that in the dedicated sections. (see restir.ssao.jxs)
 
+>[!WARNING]
+> Currently, i'm using uniform sampling to compute occlusion, but there's no reason why we shouldn't use cosine-weighted sampling for faster convergence and execution time.
+
 ## Previous-frame composited image
 
 The result of the previous frame is reprojected onto the current frame and used as source for indirect illumination; This process allows for computing multiple light bounces across frames. Only the diffuse component is reprojected at the next frame (because is not view-dependent). Reflections are fed back only if the surface is metallic. (see restir.past_frame_reprojection.jxs)
