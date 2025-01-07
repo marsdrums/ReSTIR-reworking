@@ -266,7 +266,8 @@ The strength of ReSTIR lies in its ability to gather a large number of samples a
 - frame 2: gather 1 sample, 9 samples available from history, add 80 (8x10) samples from neighbors = 90 samples
 - frame 3: gather 1 sample, 90 samples available from history, add 728 (8x21) samples from neighbors = 819 samples
 - frame 4: gather 1 sample, 819 samples available from history, add 6560 (8x820) samples from neighbors = 7380 samples
+- frame 5: gather 1 sample, 7380 samples available from history, add 59.048 (8x7381) samples from neighbors = 66.429 samples
 
-and so on... In the time span of just 4 frames, at the cost of 2 rays per pixel, we can actually select among 7380 importance sampled samples for rendering (CRAZY!!).
+and so on... In the time span of just 5 frames, at the cost of 2 rays per pixel, we can actually select among 66.429 importance sampled samples for rendering (CRAZY!!).
 
 This is the original formulation of the ReSTIR algorithm. Many shortcuts are possible, and the Jitter implementation, as well as other implementations available online, cut some corners, especially concerning history validation. In the next paragraphs i'll detail how ReSTIR has been implemented and adapted in the "gi" pass FX.
