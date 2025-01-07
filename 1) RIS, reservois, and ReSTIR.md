@@ -260,7 +260,7 @@ where $e$ is the radiance, $e_w$ is the samples's weight, $x$ is the shaded poin
 
 6) Resolve the reservoir - The sample that "survided" reservoir sampling is used to render illumination for the shaded point.
 
-The strength of ReSTIR lies in its ability to gather a large number of samples at the cost of just 2 ray tracing operations: one ray to gather the sample, one ray to validare the history samples. To put it into numbers:
+The strength of ReSTIR lies in its ability to gather a large number of samples at the cost of just 2 ray tracing operations: one ray to gather the sample, one ray to validate the history samples. To put it into numbers:
 
 - frame 1: gather 1 sample, no history available, add 8 (8x1) samples from neighbors = 9 samples
 - frame 2: gather 1 sample, 9 samples available from history, add 80 (8x10) samples from neighbors = 90 samples
@@ -269,4 +269,4 @@ The strength of ReSTIR lies in its ability to gather a large number of samples a
 
 and so on... In the time span of just 4 frames, at the cost of 2 rays per pixel, we can actually select among 7380 importance sampled samples for rendering (CRAZY!!).
 
-This is the origianl formulation of the ReSTIR algorithm. Many shortcuts are possible, and the Jitter implementation, as well as other implementations available online, cut some corners, especially concerning history validation. In the next paragraphs i'll detail how ReSTIR has been implemented and adapted in the "gi" pass FX.
+This is the original formulation of the ReSTIR algorithm. Many shortcuts are possible, and the Jitter implementation, as well as other implementations available online, cut some corners, especially concerning history validation. In the next paragraphs i'll detail how ReSTIR has been implemented and adapted in the "gi" pass FX.
