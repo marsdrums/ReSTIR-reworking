@@ -1,6 +1,6 @@
 # Resources
 
-"gi" has been implemented stealing lots of ideas. My two main sources of inspiratioin were:
+"gi" has been implemented stealing lots of ideas. My two main sources of inspiration were:
 
 - The Kajiya renderer - https://github.com/EmbarkStudios/kajiya/blob/main/docs/gi-overview.md
 - The rendering of "Pica Pica" - https://media.contentapi.ea.com/content/dam/ea/seed/presentations/dd18-seed-raytracing-in-hybrid-real-time-rendering.pdf and https://www.youtube.com/watch?v=MyTOGHqyquU&t=138s
