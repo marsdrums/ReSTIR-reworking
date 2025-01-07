@@ -16,6 +16,8 @@ The indirect diffuse computation follows these main steps:
 ## Sample gathering (half-res)
 ( shader: restir.gather_samples_and_temporal_reuse_DIF.jxs )
 
+![](./images/DIF1.png)
+
 The indirect diffuse computation starts by gathering color samples. The gathering is performed in three ways:
 
 ### 1) Gathering samples from the viewport
@@ -150,6 +152,8 @@ In case the sample comes from the viewport, the index of the sample is >= 0; if 
 
 ## Temporal reuse of the reservoirs (half-res)
 
+![](./images/DIF2.png)
+
 After the samples have been collected, the resevoirs from the previous frame are merged with the current reservoirs. A relative motion between the camera and the objects in the scene may have occured from one frame to the next, so reservoirs are temporally reprojected using velocity vectors. If reprojection fails (whether because the fragment was outside the viewport at the previous frame, or because it has just been disoccluded), the reservoir merging is skipped.
 Prior to merging, the samples in the previous-frame reservoirs are re-weighted to update their "importance".
 
@@ -191,6 +195,8 @@ This shader finds the maximum sample weight among neighboring reservoirs - the m
 
 ## First spatial reuse of the reservoirs (half-res)
 
+![](./images/DIF3.png)
+
 The next step is to combine reservoirs spatially. From the process reservoir, we draw a disk oriented according to the surface normals. Within this disk, we randomly access and merge the neighboring reservoirs (restir.spatial_reuse_1st_DIF.jxs). 
 
 ![](./images/spatial_reuse.png)
@@ -219,6 +225,8 @@ By the end of the process, the reservoir is validated, tracing a shadow ray towa
 
 ## Second spatial reuse of the reservoirs (half-res)
 
+![](./images/DIF4.png)
+
 After the first spatial reuse, a second follows. The mechanics are exactly the same, but this reuse pass uses 5 neighboring reservoirs only and a smaller search radius (restir.spatial_reuse_2nd_DIF.jxs).
 
 After this second spatial reuse of the reservoirs, wight clamping is applied again to enruse no super bright samples produces fireflies.
@@ -235,6 +243,8 @@ For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) us
 The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
 
 ## Temporal filtering (full-res)
+
+![](./images/DIF5.png)
 
 The render colors are filtered using a temporal filter (restir.temporalFilter_DIF.jxs). Colors are accumulated over frames, reprojecting the fragments' positions using velocity vectors. To avoid ghosting artifacts, history colors are rectified by clipping their colors within the minimum and maximum values of the neighboring pixels. Local statistics (mean variance and squared variance) are used to determine the size of the "clipping box". The param "variance_clipping_gamma" makes the clipping more or less severe.
 
