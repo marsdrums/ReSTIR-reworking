@@ -175,7 +175,7 @@ A reservoir contains 4 things:
 - the sum of all the weights; when a new sample is thrown into a reservoir, its weight is added to the total weight.
 - the index of the chosen sample; the reservoir holds the index of the selected sample.
 - the number of samples contained in the reservoir; for every new sample added to the reservoir, this value is increased by 1.
-- the weight of the current sample; This is needed to perform steps 5 and 6 of the RIS algorithm.
+- the weight of the current sample; 
 
 Here’s how reservoir sampling works:
 
