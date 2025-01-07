@@ -36,11 +36,11 @@ The problem with this approach, is that of all the taken samples, not all of the
 
 Importance sampling is about shooting rays where it really matters.
 
-There are two ways to (statistichally) know if a certain light direction is important:
-- the BRDF (or BSDF) of the surface being shaded
-- The relative position of light sources with respect to the point being shaded.
+What makes certain directions more important than others?
+- The BRDF (or BSDF) of the surface being shaded
+- The location of bright light sources in the scene.
 
-### Importance sample the BxDF 
+### Importance sampling the BxDF 
 
 Given a certain BxDF, we know that the light direction affects the amount of light reflected by a surface. To make an example, consider the diffuse component computation in these two scenarios:
 
