@@ -69,3 +69,20 @@ The result of the previous frame is reprojected onto the current frame and used 
 >[!NOTE]
 > Reprojecting reflections allows for inter-reflections. The result isn't physically accurate, because reflections are striclty view dependent. Still, with metallic objects, non-correct inter-reflections look better than no inter-reflection...
 
+# ReSTIR implemented in the "gi" pass FX
+
+Indirect lighting computation is divided into two components: indirect diffuse and indirect specular. These components differ significantly due to the nature of their respective BRDF contributions—diffuse (Lambertian) and specular—exhibiting distinct characteristics. By separating the two, it becomes possible to define tailored sampling PDFs and adjust ReSTIR mechanics, including temporal filtering calibration, to suit each component.
+
+Both branches—diffuse and specular—follow a similar processing pipeline, but certain steps are adjusted to optimize performance or enhance visual quality specific to their respective characteristics.
+
+Direct lighting____________________
+![](./images/direct.png)
+
+Indirect diffuse + environment_____
+![](./images/diffuse.png)
+
+Indirect specular__________________
+![](./images/reflections.png)
+
+Composited frame___________________
+![](./images/composite.png)

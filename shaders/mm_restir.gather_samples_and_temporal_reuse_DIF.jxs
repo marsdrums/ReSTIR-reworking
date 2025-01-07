@@ -368,9 +368,9 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-	int M = 30;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
-	int J = 30;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
-	int K = 30;//20; //num of samples from selected (brightest) pixels
+	int M = 3;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
+	int J = 3;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
+	int K = 3;//20; //num of samples from selected (brightest) pixels
 
 	int sample_index;
 	vec2 sample_uv;
@@ -413,7 +413,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
 	}
 
-
+/*
 	// Validate the reservoir
 
 	if(reservoir.y >= 0){ //if it's a sample from the viewport
@@ -432,7 +432,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 			p_hat = 0.0;
 		}
 	}
-
+*/
 	reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 	return reservoir;
 }

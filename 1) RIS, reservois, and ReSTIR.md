@@ -1,6 +1,20 @@
+# Notes and warnings
+
+The following pages describe the current state of the "gi" pass FX. To highlight which aspects of the algorithm don't work or could be improved, i'll be using these visual references:
+
+>[!NOTE]
+> Notes are used to indicate the "reasons why" i made certain choices.
+
+>[!WARNING]
+> Warnings are used to indicate parts of the algorithm which are not currently working, or some things that may be worth trying in my opinion.
+
+By the end of this guide/article/whatever, i'll summarize in the same place all the critical aspects that need some further work.
+
 # Some necessary info and annoying math about importance resampling, reservoirs and ReSTIR
 
 Here i'm collecting some concepts fundamental for understanding the ReSTIR algorithm and some useful links to go deeper into the subject. I try to keep it short, but i'm sure i'll fail.
+
+ReSTIR can be a bit complex at first (it took me some time to fully grasp its workings), but once you understand it, you'll appreciate how elegant and well-designed the algorithm is. If you're already familiar with concepts like importance sampling, RIS, reservoirs, and the basic mechanics of ReSTIR, feel free to skip this first page.
 
 ## Importance sampling
 
