@@ -13,6 +13,8 @@ The indirect diffuse computation follows these main steps:
 - ReSTIR resolve (full-res)
 - Temporal filtering (full-res)
 
+![](./images/DIF_sequence.png)
+
 ## Sample gathering (half-res)
 ( shader: restir.gather_samples_and_temporal_reuse_DIF.jxs )
 
