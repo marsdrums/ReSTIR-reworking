@@ -342,7 +342,7 @@ Both branches—diffuse and specular—follow a similar processing pipeline, but
 Direct lighting____________________
 ![](./images/direct.png)
 
-Indirect diffuse___________________
+Indirect diffuse + environment_____
 ![](./images/diffuse.png)
 
 Indirect specular__________________
@@ -374,7 +374,7 @@ The indirect diffuse computation starts by gathering color samples. The gatherin
 Random pixels are sampled from the Previous-frame composited image. The random distribution is uniform, and all pixels have the same propability of being sampled. If the sampled pixel is in the background, it's discarded.
 
 >[!NOTE]
-> We could ray-trace from the G-Buffer using an NDF (hemisphere sampling or cosine-weighted) to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on. Moreover, since the ray marching happens in screen space, visibility checks are performed by taking a limited number of steps along the ray, making the operation much lighter than world-space ray tracing.
+> We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on. Moreover, since the ray marching happens in screen space, visibility checks are performed by taking a limited number of steps along the ray, making the operation much lighter than world-space ray tracing.
 
 #### 2) Gathering samples from the a selection of the brightest pixels
 
@@ -392,7 +392,7 @@ To increase the chances of gathering significant (bright) samples, i'm performin
 Random pixels are samples from an environment map. The samples are taken by shooting uniformely distributed rays within the normal-oriented hemisphere. Once again, no ray tracing operation is performed to compute occlusion, as visibility checks are postponed. The environment texture has been mipmapped prior to sampling, and the samples used for the indirect diffuse component are taken from the second mip level (LoD = 1). Althoug incorrect for rigorous path tracing, sampling from a higher mip level reduces variance significanly (hence noise), and speeds up convergence.
 
 >[!NOTE]
-> Sampling directions are uniformely distributed within the normal-oriented hemisphere and generated using with noise. As the original ReSTIR paper suggests, i'm not importance-sampling directions (e.g. using cosine-weighted sampling). It may be worth trying other random generation strategies, such as blue noise or low-discrepancy sequences to see if convergence speed increases.
+> Sampling directions are uniformely distributed within the normal-oriented hemisphere and generated using a white noise. As the original ReSTIR paper suggests, i'm not importance-sampling directions (e.g. using cosine-weighted sampling). It may be worth trying other random generation strategies, such as blue noise or low-discrepancy sequences to see if convergence speed increases.
 
 #### Sample weighting and reservoir filling
 
@@ -423,6 +423,7 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 ```
 
 Once radiance has been computed, a weight is assigned the sample:
+
 ```glsl
 [...]
 //weight of the sample
@@ -430,18 +431,19 @@ p_hat = luminance( get_radiance(this_s, test_s) );
 [...]
 ```
 The weighting function (here called luminance) computes weighting as:
+
 ```glsl
 float luminance(vec3 x){ return length(x); }
 ```
 
-After weighting, the sample is inserted into the reservoir. Reservoirs contain 4 elements, and are stored as 4-component vectors. Mirroring the original ReSTIR paper, the elements of the reservoir vectors are the following:
+After weighting, the sample is inserted into the reservoir. Reservoirs contain 4 elements, and are stored as 4-component vectors. Mirroring the original ReSTIR paper, the elements in the reservoir vectors are the following:
 
 - reservoir.x = sum of the weights; the weight of each sample is added to the total weight of the reservoir.
 - reservoir.y = index of the selected sample; 
 - reservoir.z = number of samples processed by the reservoir so far.
 - reservoir.w = weight of the selected sample; 
 
-Each sample must be identified by a single value (to keep reservoirs packed into a vec4 for convenience). To make this happen, i'm using two utility funtions to transform texture coordinates into indexes and back:
+Each sample must be identified by a single value to keep reservoirs packed into a vec4 for convenience. To make this happen, i'm using two utility funtions to transform texture coordinates into indexes and back:
 
 ```glsl
 int uv2index(in vec2 uv){
@@ -454,7 +456,7 @@ vec2 index2uv(in int i){
 }
 ```
 
-At the beginning of the samples collecting process, the reservoirs are initialized to vec4(0.0);
+At the beginning of the samples collecting phase, the reservoirs are initialized to vec4(0,0,0,0);
 
 To add a new sample into the reservoir, the function "update_reservoir" is called. This function is used both to add single samples to the reservoir and for merging two reservoirs together:
 
@@ -487,10 +489,3 @@ vec4 updateReservoir(	vec4 reservoir, /*reservoir to update*/
 	return reservoir;
 }
 ```
-
-
-
-## Reflections
-
-## Compositing
-
