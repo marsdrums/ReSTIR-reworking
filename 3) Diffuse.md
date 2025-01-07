@@ -265,3 +265,6 @@ outCol.rgb = mix( p.col, c.col, c.weight );
 ```
 
 After temporal filtering, the diffuse component is ready to be composited with the specular component.
+
+>[!WARNING]
+> I'd like ReSTIR to inform temporal filtering - since i'm validating previous frames reservoirs through ray tracing operations, history colors could be discarded a priori without the need to rectify them.

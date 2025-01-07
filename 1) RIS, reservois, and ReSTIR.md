@@ -1,3 +1,10 @@
+# Resources
+
+"gi" has been implemented stealing lots of ideas. My two main sources of inspiratioin were:
+
+- The Kajiya renderer - https://github.com/EmbarkStudios/kajiya/blob/main/docs/gi-overview.md
+- The rendering of "Pica Pica" - https://media.contentapi.ea.com/content/dam/ea/seed/presentations/dd18-seed-raytracing-in-hybrid-real-time-rendering.pdf and https://www.youtube.com/watch?v=MyTOGHqyquU&t=138s
+
 # Notes and warnings
 
 The following pages describe the current state of the "gi" pass FX. To highlight which aspects of the algorithm don't work or could be improved, i'll be using these visual references:
@@ -8,7 +15,7 @@ The following pages describe the current state of the "gi" pass FX. To highlight
 >[!WARNING]
 > Warnings are used to indicate parts of the algorithm which are not currently working, or some things that may be worth trying in my opinion.
 
-By the end of this guide/article/whatever, i'll summarize in the same place all the critical aspects that need some further work.
+By the end of this guide/article/whatever, i'll summarize in the same place all the critical aspects that need further working.
 
 # Some necessary info and annoying math about importance resampling, reservoirs and ReSTIR
 
