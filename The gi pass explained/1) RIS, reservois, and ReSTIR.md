@@ -121,7 +121,7 @@ To importance sample this target function, samples should be drawn in proportion
 
 ![](./images/RIS2.png)
 
-where more samples are drawn where the function in high, fewer where it's low, none where it's zero. But we know the led strip intensity because we're omniscent; what if we don't know anything about it but still need to find a PDF that matches the target function? This is how to do it with RIS:
+where more samples are drawn where the function is high, fewer where it's low, none where it's zero. But we know the led strip intensity because we're omniscent; what if we don't know anything about it but still need to find a PDF that matches the target function? This is how to do it with RIS:
 
 1) Start with a simple and uniform PDF. The goal is to turn this simple PDF into a more complex PDF that matches the target function. Start by generating uniformly distributed random samples from the simple PDF. Being uniform, the PDF from which we're drawing our samples has a weight of 1 everywhere. (Any initial PDF can be used; for the sake of simplicity, i'm using a uniform samples distribution in this example)
 
