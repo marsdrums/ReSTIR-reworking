@@ -249,6 +249,9 @@ For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) us
 
 The picture shows the difference without and with weighting.
 
+>[!WARNING]
+> It may be worth factoring in occlusion similarities to weight samples for averaging colors. The Kajiya renderer does it, but i didn't try it yet.
+
 The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
 
 ## Temporal filtering (full-res)
