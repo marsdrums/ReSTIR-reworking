@@ -9,10 +9,10 @@ in jit_PerVertex {
 	flat vec4 plane_bottom;
 } jit_in;
 
-uniform sampler2DRect colTex, norDepthTex, depthsTex, posTex, prev_reservoirTex, prev_best_wposTex, albTex, velTex, selectedSamplesTex;
+uniform sampler2DRect colTex, norDepthTex, depthsTex, posTex, prev_reservoirTex, prev_best_wposTex, albTex, velTex;
 uniform samplerCube environmentMap;
 uniform int frame;
-uniform vec2 texDim, mapSize, selectedSamplesTexDim;
+uniform vec2 texDim, mapSize;
 uniform mat4 prevMVP, invV, MV, MVP, VP, V, projmat, textureMatrix0;
 uniform float farClip;
 uniform vec3 eye;

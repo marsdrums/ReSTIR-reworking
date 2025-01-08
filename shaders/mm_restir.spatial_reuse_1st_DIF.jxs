@@ -141,27 +141,6 @@ float luminance(vec3 x){
 	return length(x);
 }
 
-vec3 uv2dir(in vec2 uv){
-
-	uv /= mapSize;
-
-    // Convert the normalized UV coordinates to the range [-1, 1]
-    float u = uv.x * 2.0 - 1.0;
-    float v = uv.y * 2.0 - 1.0;
-
-    // Calculate the longitude and latitude angles
-    float longitude = u * M_PI;          // Longitude (-π to π)
-    float latitude = v * M_PI * 0.5;     // Latitude (-π/2 to π/2)
-
-    // Convert spherical coordinates to Cartesian coordinates
-    float x = cos(latitude) * sin(longitude);
-    float y = sin(latitude);
-    float z = cos(latitude) * cos(longitude);
-
-    vec3 dir = vec3(x, y, z);
-    return (V * vec4(dir, 0)).xyz;
-}
-
 sample get_sample(int index){
 
 	sample s;

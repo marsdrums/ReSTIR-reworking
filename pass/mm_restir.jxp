@@ -190,42 +190,7 @@
         </subpass>
 
 
-
-
-        <subpass name="uv_and_luma" file="mm_restir.calc_uv_and_luma.jxs" inputs="1" outputs="1" type="float32">
-            <input subpass="IMAGE_half" />
-        </subpass>   
-        <subpass name="brightest4" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_4" />
-            <input subpass="uv_and_luma" />
-        </subpass> 
-        <subpass name="brightest8" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_8" />
-            <input subpass="brightest4" />
-        </subpass> 
-        <subpass name="brightest16" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_16" />
-            <input subpass="brightest8" />
-        </subpass>   
-        <subpass name="brightest32" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_32" />
-            <input subpass="brightest16" />
-        </subpass> 
-        <subpass name="brightest64" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_64" />
-            <input subpass="brightest32" />
-        </subpass> 
-        <subpass name="brightest128" file="mm_restir.find_brightest_pixel.jxs" inputs="2" outputs="1" type="float32">
-            <input subpass="dummy_128" />
-            <input subpass="brightest64" />
-        </subpass>        
-
-
-
-
-
-    
-        <subpass name="DIF_gather_temporal" file="mm_restir.gather_samples_and_temporal_reuse_DIF.jxs" inputs="9" outputs="2" type="float32">
+        <subpass name="DIF_gather_temporal" file="mm_restir.gather_samples_and_temporal_reuse_DIF.jxs" inputs="8" outputs="2" type="float32">
             <input subpass="IMAGE_half" />
             <input subpass="NORMALS_half" />
             <input subpass="DEPTHPEEL_half" />
@@ -235,7 +200,6 @@
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
             <input subpass="VELOCITY_WEIGHT_half" />
-            <input subpass="brightest64" />
         </subpass>
 
         <subpass name="clamp_reservoir_0" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32">

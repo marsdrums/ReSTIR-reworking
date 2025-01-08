@@ -9,10 +9,10 @@
 	<param name="albTex" type="int" default="6" filter="nearest" />
 	<param name="environmentMap" type="int" default="7" />
 	<param name="velTex" type="int" default="8" />
-	<param name="selectedSamplesTex" type="int" default="9" />
+	//<param name="selectedSamplesTex" type="int" default="9" />
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
-	<param name="selectedSamplesTexDim" type="vec2" state="TEXDIM9" />
+	//<param name="selectedSamplesTexDim" type="vec2" state="TEXDIM9" />
 	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
 	<param name="farClip" type="float" state="FAR_CLIP" />
 	<param name="nearClip" type="float" state="NEAR_CLIP" />
@@ -43,8 +43,8 @@
 		<bind param="prev_best_wposTex" program="fp" />
 		<bind param="albTex" program="fp" />
 		<bind param="environmentMap" program="fp" />
-		<bind param="selectedSamplesTex" program="fp" />
-		<bind param="selectedSamplesTexDim" program="fp" />
+		//<bind param="selectedSamplesTex" program="fp" />
+		//<bind param="selectedSamplesTexDim" program="fp" />
 		<bind param="velTex" program="fp" />
 		<bind param="prevMVP" program="fp" />
 		<bind param="farClip" program="fp" />
@@ -297,17 +297,6 @@ vec2 pos2uv(in vec3 p){
 	return floor( ( textureMatrix0 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
 }
 
-bool valid_reprojection(in sample this_s, in vec2 uv){
-
-	if(!valid_uv(uv)) return false;
-	//vec2 prev_vel = texture(depthLayersTex, uv).ba;
-	//float vel_diff = luminance(this_s.vel - prev_vel);
-	//float weight = clamp( (vel_diff - 0.001)*1000, 0.0, 1.0 );
-	//if(weight > 0.1) return false;
-	return true;
-}
-
-
 vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir){
 
     vec4 reservoir = vec4(0); //curr reservoir
@@ -406,9 +395,8 @@ void main(void) {
 	//TEMPORAL REUSE//____________________________________________________________
 
 		ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
-		//reprojected_uv = ivec2(this_s.uv);
 
-		if(valid_reprojection(this_s, vec2(reprojected_uv))){
+		if( valid_uv(vec2(reprojected_uv)) ){
 
 			vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
 			vec4 temporal_reservoir = vec4(0);
