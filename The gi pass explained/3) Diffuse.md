@@ -247,7 +247,7 @@ For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) us
 
 ![](./images/weighting.png)
 
-This picture shosw the difference without and with weighting.
+The picture shows the difference without and with weighting.
 
 The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
 
