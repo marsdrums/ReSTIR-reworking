@@ -23,8 +23,6 @@ Samples are gathered differently than the diffuse pass - instead of picking rand
 
 To determine the ray direction for reflections, I refer to microfacet theory. Here’s a quick recap:
 
-Microfacet theory is a widely used model in computer graphics that explains how light interacts with surfaces at a microscopic level. Instead of treating surfaces as perfectly smooth or uniformly rough, this theory assumes that a surface is made up of countless tiny planar facets, each acting like a mirror to reflect light.
-
 From the perspective of microfacet theory, a pixel cannot be represented by a single surface orientation. Instead, it represents a "patch" of microscopic surfaces, each with its own unique orientation. The variation in these facet orientations is governed by a roughness parameter, which controls the divergence of their normals. Since individual facet normals cannot be computed analytically, they are represented statistically.
 
 The distribution of facet orientations is described by a normal distribution function (NDF), which specifies the likelihood of a facet facing a particular direction. 
@@ -125,7 +123,7 @@ https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf
 >[!WARNING]
 > The framework in which this method is applied is quite different from ours. I tried adapring the method to work in our context with mixed results. I'll go more into the details of what's not working in the final section.
 
-In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending blending colors according to local staistics (mean, and squared variance). This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer.
+In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending colors according to local staistics (mean, and squared variance). This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer.
 
 >[!WARNING]
 > Once again, i'm getting mixed results with this kind of temporal reprojection. While it effectively improves temporal coherence for very smooth materials and very rough materials, it's unclear how to balance it with medium-roughness materials.
