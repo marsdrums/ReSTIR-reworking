@@ -108,7 +108,7 @@ The resolution pass is very similar to the one used for the diffuse compoent. Th
 - The resolve pass for reflections uses 8 samples instead of 4.
 - Occlusion is no longer taken into account.
 - The radius for looking up samples into neighboring reservoirs is affected by roughness.
-- Instead of a normal-oriented disk, neighboring reservoirs sampled by projecting the specular lobe in screen-space and sampling from within it.
+- Instead of a normal-oriented disk, neighboring reservoirs are sampled by projecting the specular lobe in screen-space and sampling from within it.
 
 >[!WARNING]
 > Currently i'm always reading samples from 8 reservoirs. The number of averaged samples could be made proportional to material's roughness, with high-roughness materials needing more samples to average, and low-roughness material just a few or one.
