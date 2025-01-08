@@ -32,7 +32,7 @@ L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf
 $$
 
 There's no computable solution to the rendering equation, but we can estimate its result using the Monte Carlo method. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the light contributions, we can estimate the solution to the rendering equation.
-The problem with this approach, is that of all the taken samples, not all of them are "important", as many won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
+The problem with this approach, is that of all the taken samples, not all of them are equally "important", as many won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
 
 Importance sampling is about shooting rays where it really matters.
 
@@ -70,7 +70,7 @@ float PDF = cosine / M_PI; //cosine-weighted PDF weight
 vec3 diffuse_radiance = albedo * cosine * light_color / PDF;										
 ```
 >[!NOTE]
-> Cosine-weighted PDF is cool also because the cosine term cancels out nicely, and can be rewritte like:
+> Cosine-weighted PDF is cool also because the cosine term cancels out nicely, and can be re-written like:
 ```glsl
 // compute diffuse component for cosine-weighted PDF
 
