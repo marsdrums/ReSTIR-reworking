@@ -206,7 +206,7 @@ The next step is to combine reservoirs spatially. From the processed reservoir, 
 No reservoir validation is performed on the individual merged reservoir, on the assumption that fragments visible from the current position are likely visible from neighboring positions as well. Neighboring reservoirs are sampled within a normal-oriented disk, as fragments with similar orientations (normals) to the current fragment are more likely to contain valuable samples. This approach increases the likelihood of finding important contributions. Prior to merging, samples are re-weighted, like we did with temporal reused reservoirs.
 
 >[!WARNING]
-> The weighting function is length(radiance). While this is ideal, length() functions are slow because they involve a square root computation. In some ReSTIR implementations i saw, the weigt computation is performed using luminance(radiance). It may be worth trying substitute the weighting function with a lighter luminance computation, especially in spatial reuse, where many weights must be computed.
+> The weighting function is length(radiance). While this is ideal, length() functions are slow because they involve a square root computation. In some ReSTIR implementations i saw, the weight computation is performed using luminance(radiance). It may be worth trying substitute the weighting function with a lighter luminance computation, especially in spatial reuse, where many weights must be computed.
 
 The sampling pattern follows a spatio-temporal blue noise distribution, ensuring uniform yet randomized coverage across both space and time.
 
