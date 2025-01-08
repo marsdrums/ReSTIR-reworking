@@ -85,7 +85,7 @@ After weighting, the sample is inserted into a reservoir.
 
 ## Temporal reuse of the reservoirs (half-res)
 
-As with the diffuse component, the reservoirs from the previous frame are merged with the one from the current frame. If temporal reprojection is valid, the candidate from the history reservoir is re-weighted in the current frame, and the reservoirs are combined.
+As with the diffuse component, the reservoirs from the previous frame are merged with those from the current frame. If temporal reprojection is valid, the candidate from the history reservoir is re-weighted in the current frame, and the reservoirs are combined.
 
 For reflections, the reservoir length is limited to 4, resulting in a relatively short reservoir. While this shorter length offers less temporal stability, it allows the reflection computation to respond more quickly to sudden changes in the scene.
 
