@@ -2,7 +2,7 @@
 
 ![](./images/reflections.png)
 
-Reflections are computed similarly to indirect diffuse, but special attention is paid for the PDF from which candidate samples are drawn.
+Reflections are computed similarly to indirect diffuse, but special attention is paid on the PDF from which candidate samples are drawn.
 
 Reflections computation includes the following steps:
 - Sample gathering (half-res)
@@ -21,11 +21,23 @@ Samples are gathered differently than the diffuse pass - instead of picking rand
 
 ### The PDF for reflections
 
-For determining useful ray direction, i'm referring to the microfacets theory. A quick recap:
-Microfacet theory is a widely used model in computer graphics to describe the interaction of light with surfaces at a microscopic level. Instead of treating surfaces as perfectly smooth or uniformly rough, microfacet theory assumes that a surface is composed of countless tiny planar facets, each acting like a mirror that reflects light.
+To determine the ray direction for reflections, I refer to microfacet theory. Here’s a quick recap:
 
-The surface is made up of small planar microfacets with varying orientations. The distribution of these orientations is described by a normal distribution function (NDF), which determines how likely a given facet is to face a particular direction. 
+Microfacet theory is a widely used model in computer graphics that explains how light interacts with surfaces at a microscopic level. Instead of treating surfaces as perfectly smooth or uniformly rough, this theory assumes that a surface is made up of countless tiny planar facets, each acting like a mirror to reflect light.
+
+From the perspective of microfacet theory, a pixel cannot be represented by a single surface orientation. Instead, it represents a "patch" of microscopic surfaces, each with its own unique orientation. The variation in these facet orientations is governed by a roughness parameter, which controls the divergence of their normals. Since individual facet normals cannot be computed analytically, they are represented statistically.
+
+The distribution of facet orientations is described by a normal distribution function (NDF), which specifies the likelihood of a facet facing a particular direction. 
 
 To generate coherent ray directions, i'm importance sampling the NDF of the microfacets. The NDF distribution model i'm using is the GGX distribution of Visible Normals (GGX VNDF). More on this topic here: https://jcgt.org/published/0007/04/01/paper.pdf, https://schuttejoe.github.io/post/ggximportancesamplingpart2/. 
 
-To maximize convergence time, the random sampling cycles through the first 64 elements of the quasi-random sequence Halton (2,3). Each pixel starts from a different index of the sequence, and the sampling kernel is rotated randomly.
+To maximize convergence time, the random sampling cycles through the first 64 elements of the quasi-random sequence Halton (2,3). For each pixel, the sequence starts from a different random index, and the sampling kernel is randomly rotated.
+
+Since the distribution isn't uniform, the PDF changes for each direction - along with the hit point (if the ray intersects the geometry) or the ray direction (if the ray doesn't intersect the geometry), also the PDF of the sampled direction is output from the ray tracing function to divide the weight of the sample.
+
+>[!WARNING]
+> I struggled making the division by PDF work, and to this day it doesn't look right. I might have implemented the PDF weight computation wrong.
+
+## Temporal reuse of the reservoirs (half-res)
+
+
