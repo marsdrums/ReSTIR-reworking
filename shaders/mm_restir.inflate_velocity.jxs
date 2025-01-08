@@ -66,6 +66,7 @@ void main(void) {
 	get_best_uv(vec2(+1, +1), bestUV, closestDepth);
 
 	outColor = texelFetch(velTex, bestUV);
+	
 }
 ]]>
 </program>

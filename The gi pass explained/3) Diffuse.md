@@ -243,14 +243,11 @@ The output of this pass is sent to the resolve pass and fed back for temporal re
 Finally, we should have some reservoirs holding the best possible samples.
 The resolve pass transforms these samples into actual colors, which are rendered on screen. This step is performed at full resolution.
 
-For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) uses four reservoirs to determine the color of each pixel. A normal-oriented disk is drawn again, randomly accessing four reservoirs, including the current one. The search radius is once again influenced by the occlusion map and the reservoirs are chosen following a spatio-temporal blue noise distribution. Unlike the spatial reuse pass, neighboring reservoirs with differing normals or positions are not outright rejected. Instead, a weight is assigned to each sample based on orientation and positional differences. Before averaging colors, each contribution is scaled by its respective weight.
+For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) uses four reservoirs to determine the color of each pixel. A normal-oriented disk is drawn again, randomly accessing four reservoirs, including the current one. The search radius is once again influenced by the occlusion map and the reservoirs are chosen following a spatio-temporal blue noise distribution. Unlike the spatial reuse pass, neighboring reservoirs with differing normals, positions andare not outright rejected. Instead, a weight is assigned to each sample based on orientation, positional differences and ambient occlusion similarities. Before averaging colors, each contribution is scaled by its respective weight.
 
 ![](./images/weighting.png)
 
 The picture shows the difference without and with weighting.
-
->[!WARNING]
-> It may be worth factoring in occlusion similarities to weight samples for averaging colors. The Kajiya renderer does it, but i didn't try it yet.
 
 The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
 

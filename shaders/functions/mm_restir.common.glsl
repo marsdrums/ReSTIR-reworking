@@ -62,7 +62,8 @@ vec2 index2uv_for_env(in int i){
 }
 
 float luminance(vec3 x){
-	return dot(x, vec3(0.299, 0.587, 0.114));
+	//return dot(x, vec3(0.299, 0.587, 0.114));
+	return length(x);
 }
 
 vec3 uv2dir(in vec2 uv){

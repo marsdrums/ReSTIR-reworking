@@ -12,8 +12,8 @@ bool shadowRay(in sample this_s, in sample test_s, inout uint seed){
 
         vec4 sampled_depth = texture(depthsTex, test_uv);
 
-        if (    (sampled_depth.r > expected_depth && expected_depth > sampled_depth.g) || 
-                (sampled_depth.b > expected_depth && expected_depth > sampled_depth.a) ){
+        if (    (sampled_depth.r >= expected_depth && expected_depth >= sampled_depth.g) || 
+                (sampled_depth.b >= expected_depth && expected_depth >= sampled_depth.a) ){
             return false;
         }
     }
@@ -29,7 +29,7 @@ bool shadowRayForEnv(in sample this_s, in sample test_s, inout uint seed, in mat
     vec4 projP = projmat * vec4(end_pos, 1);
     projP.xy = (projP.xy/projP.w) * 0.5 + 0.5;
     vec2 end_uv = ( textureMatrix * vec4(projP.xy,0,1) ).xy;
-    float num_iterations = 200;//length(test_s.uv - end_uv);
+    float num_iterations = 100;//length(test_s.uv - end_uv);
     float step = 1 / num_iterations;
     float start = 0.02;//step;//RandomFloat01(seed)*0.01;//step * (RandomFloat01(seed) + 0.5);
 
@@ -43,8 +43,8 @@ bool shadowRayForEnv(in sample this_s, in sample test_s, inout uint seed, in mat
 
         vec4 sampled_depth = texelFetch(depthsTex, ivec2(test_uv));
 
-        if (    (sampled_depth.r > expected_depth && expected_depth > sampled_depth.g) || 
-                (sampled_depth.b > expected_depth && expected_depth > sampled_depth.a) ){
+        if (    (sampled_depth.r >= expected_depth && expected_depth >= sampled_depth.g) || 
+                (sampled_depth.b >= expected_depth && expected_depth >= sampled_depth.a) ){
             return false;
         }
     }

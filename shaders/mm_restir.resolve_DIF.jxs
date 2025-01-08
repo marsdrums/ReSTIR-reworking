@@ -101,29 +101,6 @@ uint get_rng_seed(){
 	return uint(jit_in.uv.x*3713) + uint(jit_in.uv.y*2882) + uint(frame*372);
 }
 
-vec2 get_sample_uv(inout uint seed, in float radius, in int iteration){
-
-	float angle = RandomFloat01(seed)*M_TAU;
-	float ra = sqrt(RandomFloat01(seed))*radius;
-	return vec2(cos(angle), sin(angle))*ra + jit_in.uv;
-}
-
-bool valid_uv(in vec2 uv){
-	return uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y;
-}
-
-void validate_uv(inout vec2 uv){
-	uv.x = (uv.x < 0 || uv.x >= texDim.x) ? jit_in.uv.x + -1*(uv.x - jit_in.uv.x) : uv.x;
-	uv.y = (uv.y < 0 || uv.y >= texDim.y) ? jit_in.uv.y + -1*(uv.y - jit_in.uv.y) : uv.y;
-
-}
-
-void wrap(inout vec2 uv){
-    uv = vec2(	mod(mod(uv.x, texDim.x) + texDim.x, texDim.x),
-    			mod(mod(uv.y, texDim.y) + texDim.y, texDim.y));
-
-}
-
 int uv2index(in vec2 uv){
 	uv = floor(uv);
 	return int(uv.x + uv.y*texDim.x);
@@ -138,29 +115,8 @@ vec2 index2uv_for_env(in int i){
 }
 
 float luminance(vec3 x){
-	//return length(x);
-	return dot(x, vec3(0.299, 0.587, 0.114));
-}
-
-vec3 uv2dir(in vec2 uv){
-
-	uv /= mapSize;
-
-    // Convert the normalized UV coordinates to the range [-1, 1]
-    float u = uv.x * 2.0 - 1.0;
-    float v = uv.y * 2.0 - 1.0;
-
-    // Calculate the longitude and latitude angles
-    float longitude = u * M_PI;          // Longitude (-π to π)
-    float latitude = v * M_PI * 0.5;     // Latitude (-π/2 to π/2)
-
-    // Convert spherical coordinates to Cartesian coordinates
-    float x = cos(latitude) * sin(longitude);
-    float y = sin(latitude);
-    float z = cos(latitude) * cos(longitude);
-
-    vec3 dir = vec3(x, y, z);
-    return (V * vec4(dir, 0)).xyz;
+	return length(x);
+	//return dot(x, vec3(0.299, 0.587, 0.114));
 }
 
 sample get_sample(int index){
@@ -199,19 +155,7 @@ sample get_sample_pos_col(int index){
 	s.pos = lookup3.xyz;
 	return s;
 }
-/*
-sample get_sample_dir_col_for_env_jittered(int index, inout uint seed){
 
-	sample s;
-	s.uv = index2uv_for_env(index);
-	ivec2 iuv = ivec2(s.uv);
-	vec2 jitter_uv = s.uv;// + 2*vec2(RandomFloat01(seed)-0.5, RandomFloat01(seed)-0.5);
-	s.col = texture(environmentMap, jitter_uv).rgb;
-	s.nor = uv2dir(jitter_uv);
-	s.pos = s.nor; //use the position variable to pass the direction for reprojection
-	return s;
-}
-*/
 sample get_environment_sample(in vec3 candidate_dir, inout uint seed){
 	sample s;
 	s.col = textureLod(environmentMap, candidate_dir, 1).rgb;
@@ -222,87 +166,20 @@ sample get_environment_sample(in vec3 candidate_dir, inout uint seed){
 
 vec3 get_radiance(in sample this_s, in sample test_s){
 
-	vec3 diff = test_s.pos - this_s.pos;
-	vec3 dir = normalize(diff);//diff / dist;
+	vec3 dir = normalize(test_s.pos - this_s.pos);
 	float lambert = max(0.0, dot(this_s.nor, dir));
-	float PDF = 1 / (M_TAU);
-	return this_s.alb * lambert * test_s.col / PDF;
+	//float PDF = 1 / M_TAU;
+	//return this_s.alb * lambert * test_s.col / PDF;	
+	return M_TAU * this_s.alb * lambert * test_s.col;										
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
-	float PDF = 1 / (M_TAU);
-	return this_s.alb * lambert * test_s.col / PDF;							
+	//float PDF = 1 / (M_TAU);
+	//return this_s.alb * lambert * test_s.col / PDF;
+	return M_TAU * this_s.alb * lambert * test_s.col;							
 }
-/*
-bool visible(in sample this_s, in sample test_s, inout uint seed){
-	//return true;
-	float num_iterations = 6;
-	float step = 0.1;//1 / num_iterations;
-	float start = step * (1 + RandomFloat01(seed) - 0.5);
-	for(float i = start; i < 1; i += step){ //make a better tracing
-		vec2 test_uv = mix(this_s.uv, test_s.uv, vec2(i*i));
-		float expected_depth = (this_s.depth * test_s.depth) / mix(test_s.depth, this_s.depth, i*i);
-		float sampled_depth = texelFetch(norDepthTex, ivec2(test_uv)).w;
-		if(sampled_depth < (expected_depth - 0.01) ) return false;
-	}
-	return true;
-}
-*/
-
-bool visible(in sample this_s, in sample test_s, inout uint seed){
-
-	return true;
-	float num_iterations = length(test_s.uv - this_s.uv);
-	num_iterations /= 50;
-	float step = 1 / num_iterations;
-	float start = step * (1 + RandomFloat01(seed) - 0.5);
-	for(float i = start; i < 1; i += step){ //make a better tracing
-		vec2 test_uv = mix(this_s.uv, test_s.uv, i);
-		float expected_depth = (this_s.pos.z * test_s.pos.z) / mix(test_s.pos.z, this_s.pos.z, i);
-		vec4 depths = texelFetch(depthsTex, ivec2(test_uv*2));
-		if ( 	(depths.r > expected_depth && expected_depth > depths.g ) || 
-    			(depths.b > expected_depth && expected_depth > depths.a ) ){
-			return false;
-		}
-	}
-	return true;
-}
-
-vec2 pos2uv(in vec3 p){
-
-	vec4 projP = projmat * vec4(p, 1);
-	projP.xy = (projP.xy/projP.w) * 0.5 + 0.5;
-	return floor( ( textureMatrix1 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
-
-}
-
-/*
-bool visible_env(in sample this_s, in sample test_s, inout uint seed){
-
-	return true;
-	float num_iterations = 50;
-	float step = 1 / num_iterations;
-	float start = step * (RandomFloat01(seed) + 0.5);
-	vec3 end_pos = this_s.pos + test_s.nor*10; 
-	float end_depth = end_pos.z;//length(end_pos);
-	vec2 end_uv = pos2uv(end_pos);
-	for(float i = start; i < 1; i += step){ //make a better tracing
-		vec2 test_uv = mix(this_s.uv, end_uv, vec2(i));
-		if(test_uv.x < 0 || test_uv.y < 0 || test_uv.x >= texDim.x || test_uv.y >= texDim.y) return true;
-		float expected_depth = (this_s.pos.z * end_depth) / mix(end_depth, this_s.pos.z, i);
-		vec4 depths = texelFetch(depthsTex, ivec2(test_uv*2));
-		if ( 	(depths.r > expected_depth && expected_depth > depths.g ) || 
-    			(depths.b > expected_depth && expected_depth > depths.a ) ){
-			return false;
-		}
-	}
-	return true;
-
-
-}
-*/
 
 float saturate(in float x){ return clamp(x, 0, 1); }
 
@@ -328,13 +205,11 @@ void main(void) {
 	outColor = vec4(0,0,0,1);
 
 	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
-	//float radius = mix(0.3, 40, occlusion);//mix(4, 4, this_s.depth);
 	float radius = mix(0., 30., occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
-	int NUM_SAMPLES = 4;//int( mix(1, 4, occlusion));//int(mix(4, 4, occlusion));//int(mix(4, 4, min(1.0, reservoir.z*0.001)));
+	int NUM_SAMPLES = 3;
 	float weight = 0.0001;
 
-
-	for(int i = NUM_SAMPLES - 1; i >= 0; i--){
+	for(int i = NUM_SAMPLES; i > 0; i--){
 
 		ivec2 randUV;
 		ivec2 randUVfull;
@@ -368,17 +243,16 @@ void main(void) {
 		if(reservoir.y >= 0){ //if the sample is from the viewport
 
 			test_s = get_sample_pos_col(int(reservoir.y));
-
-			if(visible(this_s, test_s, seed)){
-				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
-				vec3 radiance = get_radiance(this_s, test_s);
-				float p_hat = luminance(radiance);// * (this_s.depth + 1);
-				if(p_hat <= 0)continue;
-				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-				radiance *= reservoir.w;
-				outColor.rgb += radiance*this_weight;
-				weight += this_weight;
-			}		
+			
+			float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
+			vec3 radiance = get_radiance(this_s, test_s);
+			float p_hat = luminance(radiance);// * (this_s.depth + 1);
+			if(p_hat <= 0)continue;
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			radiance *= reservoir.w;
+			outColor.rgb += radiance*this_weight;
+			weight += this_weight;
+					
 
 		} else {
 
@@ -386,52 +260,46 @@ void main(void) {
 			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
 			test_s = get_environment_sample(best_dir, seed);
 
-			if(true/*shadowRayForEnv(this_s, test_s, seed, textureMatrix1)*/){
-
-				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
-				vec3 radiance = get_radiance_for_env(this_s, test_s);
-				float p_hat = luminance(radiance);// * (this_s.depth + 1);
-				if(p_hat <= 0) continue;
-				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-				radiance *= reservoir.w;
-				outColor.rgb += radiance*this_weight;
-				weight += this_weight;
-			}
+			float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
+			vec3 radiance = get_radiance_for_env(this_s, test_s);
+			float p_hat = luminance(radiance);// * (this_s.depth + 1);
+			if(p_hat <= 0) continue;
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			radiance *= reservoir.w;
+			outColor.rgb += radiance*this_weight;
+			weight += this_weight;
 		}
 	}
 
-	//if(weight < 0.3){
+	vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
 
-		vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
+	if(reservoir.y >= 0){ //if the sample is from the viewport
 
-		if(reservoir.y >= 0){ //if the sample is from the viewport
+		test_s = get_sample_pos_col(int(reservoir.y));
 
-			test_s = get_sample_pos_col(int(reservoir.y));
+		{
+			vec3 radiance = get_radiance(this_s, test_s);
+			float p_hat = luminance(radiance);
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			radiance *= reservoir.w;
+			outColor.rgb += radiance;
+			weight += 1;
+		}		
 
-			if(visible(this_s, test_s, seed)){
-				vec3 radiance = get_radiance(this_s, test_s);
-				float p_hat = luminance(radiance);
-				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-				radiance *= reservoir.w;
-				outColor.rgb += radiance;
-				weight += 1;
-			}		
+	} else {
 
-		} else {
+		vec3 best_dir = texelFetch(bestDirTex, ivec2(jit_in.uv)).xyz;
+		test_s = get_environment_sample(best_dir, seed);
 
-			vec3 best_dir = texelFetch(bestDirTex, ivec2(jit_in.uv)).xyz;
-			test_s = get_environment_sample(best_dir, seed);
-
-			if(true/*shadowRayForEnv(this_s, test_s, seed, textureMatrix1)*/){
-				vec3 radiance = get_radiance_for_env(this_s, test_s);
-				float p_hat = luminance(radiance);
-				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-				radiance *= reservoir.w;
-				outColor.rgb += radiance;
-				weight += 1;
-			}
+		{
+			vec3 radiance = get_radiance_for_env(this_s, test_s);
+			float p_hat = luminance(radiance);
+			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			radiance *= reservoir.w;
+			outColor.rgb += radiance;
+			weight += 1;
 		}
-	//}
+	}
 
 	outColor.rgb /= weight;
 	outColor.rgb /= this_s.alb;

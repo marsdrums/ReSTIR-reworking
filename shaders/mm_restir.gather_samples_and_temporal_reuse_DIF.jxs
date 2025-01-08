@@ -29,6 +29,9 @@
 	<param name="frame" type="int" state="FRAME" />
 	<param name="farCorner" type="vec3" state="FAR_CORNER" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+
+	<param name="enable_temporal_DIF" type="int" default="1" />
+
 	<language name="glsl" version="1.5">
 		<bind param="colTex" program="fp" />
 		<bind param="norDepthTex" program="fp" />
@@ -63,6 +66,8 @@
 		<bind param="farCorner" program="vp" />
 		<bind param="eye" program="fp" />
 
+		<bind param="enable_temporal_DIF" program="fp" />
+
 		<include source="c74.noise.funcs.glsl" program="fp" />
 		<include source="mm_restir.structures.temporal.DIF.glsl" program="fp" />
 		<include source="mm_restir.constants.glsl" program="fp" />
@@ -90,7 +95,6 @@ uniform mat4 MVP;
 uniform mat4 textureMatrix0;
 uniform vec3 farCorner;
 uniform float nearClip, farClip;
-
 
 vec4 computePlane(vec3 p1, vec3 p2, vec3 p3) {
     vec3 normal = normalize(cross(p2 - p1, p3 - p1));
@@ -144,6 +148,8 @@ layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outPhat;
 //layout (location = 2) out vec4 outTest;
 
+uniform int enable_temporal_DIF;
+
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
 }
@@ -157,13 +163,7 @@ vec2 get_sample_uv_from_selected(inout uint seed){
 
 	return vec2(RandomFloat01(seed), RandomFloat01(seed))*vec2(30,18); //*** Hard coded tex dim, but it must change!
 }
-/*
-vec2 cartesianToUv(vec3 cartesian) {
-    float theta = atan(cartesian.y, cartesian.x)/TWOPI; // azimuthal angle
-    float phi = acos(cartesian.z)/M_PI; // polar angle
-    return vec2(theta, phi);
-}
-*/
+
 vec3 get_canidate_dir(inout uint seed, in vec3 nor){
 
 	//generate random unit vector 
@@ -202,7 +202,6 @@ vec2 index2uv_for_env(in int i){
 }
 
 float luminance(vec3 x){
-	//return length(x);
 	//return dot(x, vec3(0.299, 0.587, 0.114));
 	return length(x);
 }
@@ -253,8 +252,7 @@ sample get_sample(int index){
 
 vec3 get_radiance(in sample this_s, in sample test_s){
 
-	vec3 diff = test_s.pos - this_s.pos;
-	vec3 dir = normalize(diff);
+	vec3 dir = normalize(test_s.pos - this_s.pos);
 	float lambert = max(0.0, dot(this_s.nor, dir));
 	//float PDF = 1 / M_TAU;
 	//return this_s.alb * lambert * test_s.col / PDF;	
@@ -317,8 +315,8 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
 	int M = 1;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
-	int J = 2;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
-	int K = 1;//20; //num of samples from selected (brightest) pixels
+	int J = 1;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
+	//int K = 0;//20; //num of samples from selected (brightest) pixels
 
 	int sample_index;
 	vec2 sample_uv;
@@ -337,7 +335,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 		p_hat = luminance( get_radiance(this_s, test_s) );
 	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
 	}
-
+/*
 	//initial selection of 1 sample of M
 	for (int i = K; i > 0; i--)
 	{
@@ -350,7 +348,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 		p_hat = luminance( get_radiance(this_s, test_s) );
 	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
 	}
-
+*/
 	//sample the environment map
 	for (int k = J; k > 0; k--)
 	{
@@ -361,26 +359,26 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
 	}
 
-/*
+
 	// Validate the reservoir
 
 	if(reservoir.y >= 0){ //if it's a sample from the viewport
 
 		sample test_s = get_sample(int(reservoir.y));
 		p_hat = luminance( get_radiance(this_s, test_s) );
-		if(!shadowRay(this_s, test_s, seed)){
-			p_hat = 0.0;
-		}
+		//if(!shadowRay(this_s, test_s, seed)){
+		//	p_hat = 0.0;
+		//}
 
 	} else { //if it's a sample from the environment map
 
 		sample test_s = get_environment_sample(best_dir);
 		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
-		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
-			p_hat = 0.0;
-		}
+		//if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+		//	p_hat = 0.0;
+		//}
 	}
-*/
+
 	reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 	return reservoir;
 }
@@ -403,83 +401,75 @@ void main(void) {
 
 	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir);		
 
+	if(enable_temporal_DIF == 1){
 
 	//TEMPORAL REUSE//____________________________________________________________
 
-	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
-	//reprojected_uv = ivec2(this_s.uv);
+		ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
+		//reprojected_uv = ivec2(this_s.uv);
 
-	if(valid_reprojection(this_s, vec2(reprojected_uv))){
+		if(valid_reprojection(this_s, vec2(reprojected_uv))){
 
-		vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
-		vec4 temporal_reservoir = vec4(0);
-		vec3 dummy_dir;
+			vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
+			vec4 temporal_reservoir = vec4(0);
+			vec3 dummy_dir;
 
-		// combine current reservoir
-			temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
-		
-		// combine previous reservoir
-		if(prev_reservoir.y >= 0){
+			// combine current reservoir
+				temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+			
+			// combine previous reservoir
+			if(prev_reservoir.y >= 0){
 
-			vec4 lookup_prev_pos_id = texelFetch(prev_best_wposTex, reprojected_uv);
-			vec4 prev_best_wpos = projmat * vec4( (V * vec4(lookup_prev_pos_id.xyz, 1)).xyz, 1);
-			prev_best_wpos.xy = (prev_best_wpos.xy/prev_best_wpos.w) * 0.5 + 0.5;
-			vec2 prev_best_wpos_uv = floor((textureMatrix0 * vec4(prev_best_wpos.xy,1,1)).xy) + 0.5;// * texDim;
+				vec4 lookup_prev_pos_id = texelFetch(prev_best_wposTex, reprojected_uv);
+				vec4 prev_best_wpos = projmat * vec4( (V * vec4(lookup_prev_pos_id.xyz, 1)).xyz, 1);
+				prev_best_wpos.xy = (prev_best_wpos.xy/prev_best_wpos.w) * 0.5 + 0.5;
+				vec2 prev_best_wpos_uv = floor((textureMatrix0 * vec4(prev_best_wpos.xy,1,1)).xy) + 0.5;// * texDim;
 
-			if(valid_uv(prev_best_wpos_uv)){
+				if(valid_uv(prev_best_wpos_uv)){
 
-				prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
-				test_s = get_sample(int(prev_reservoir.y));
+					prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
+					test_s = get_sample(int(prev_reservoir.y));
 
 
-				p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
+					p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
+					if(background(test_s)) p_hat = 0.0;
+
+					prev_reservoir.z =  min(20*reservoir.z, prev_reservoir.z);
+					temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, dummy_dir, dummy_dir);
+				}
+
+			} else {
+
+				vec3 prev_best_dir = texelFetch(prev_best_wposTex, reprojected_uv).xyz;
+
+				//prev_reservoir.y = float(uv2index_for_env(prev_best_wpos_uv));
+				test_s = get_environment_sample(prev_best_dir);
+
+				p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
 				if(background(test_s)) p_hat = 0.0;
 
-				//vec2 prev_vel = texture(depthLayersTex, vec2(reprojected_uv)).ba;
-				//float vel_diff = length(this_s.vel - prev_vel);
-				//float weight = clamp( 1 - (vel_diff - 0.001)*1000, 0.0, 1.0 );
 
-				prev_reservoir.z =  min(20*reservoir.z, prev_reservoir.z);
-				temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, dummy_dir, dummy_dir);
+				prev_reservoir.z = min(20*reservoir.z, prev_reservoir.z);
+				temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
+
 			}
 
-		} else {
-
-			vec3 prev_best_dir = texelFetch(prev_best_wposTex, reprojected_uv).xyz;
-
-			//prev_reservoir.y = float(uv2index_for_env(prev_best_wpos_uv));
-			test_s = get_environment_sample(prev_best_dir);
-
-			p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
-			if(background(test_s)) p_hat = 0.0;
-
-			//vec2 prev_vel = texture(depthLayersTex, vec2(reprojected_uv)).ba;
-			//float vel_diff = length(this_s.vel - prev_vel);
-			//float weight = clamp( 1 - (vel_diff - 0.001)*1000, 0.0, 1.0 );
-
-			prev_reservoir.z = min(20*reservoir.z, prev_reservoir.z);
-			temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
-
+			temporal_reservoir.z = reservoir.z + prev_reservoir.z;
+			
+			if(temporal_reservoir.y >= 0){
+				test_s = get_sample(int(temporal_reservoir.y));
+				p_hat = luminance( get_radiance(this_s, test_s) );			
+			} else {
+				test_s = get_environment_sample(best_dir);
+				p_hat = luminance( get_radiance_for_env(this_s, test_s) );
+					
+			}
+			
+			temporal_reservoir.w = (1 / max(p_hat, 0.0001)) * (temporal_reservoir.x / max(temporal_reservoir.z, 0.0001));		
+			reservoir = temporal_reservoir;	
 		}
-
-		temporal_reservoir.z = reservoir.z + prev_reservoir.z;
-		
-		//if(temporal_reservoir.y >= 0){
-		//	test_s = get_sample(int(temporal_reservoir.y));
-		//	p_hat = length( get_radiance(this_s, test_s) );			
-		//} else {
-		//	test_s = get_sample_dir_col_for_env_jittered(int(temporal_reservoir.y), seed);
-		//	p_hat = length( get_radiance_for_env(this_s, test_s) );
-		//		
-		//}
-		//
-		//temporal_reservoir.w = (1 / max(p_hat, 0.0001)) * (temporal_reservoir.x / max(temporal_reservoir.z, 0.0001));		
-		reservoir = temporal_reservoir;	
-		
+		//___________________________________________________________________________________________________________________________________________________________
 	}
-
-	//___________________________________________________________________________________________________________________________________________________________
-
 
 	if(reservoir.y >= 0){ //if the sample is from the viewport
 

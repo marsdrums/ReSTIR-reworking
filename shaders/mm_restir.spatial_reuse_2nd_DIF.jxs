@@ -31,6 +31,8 @@
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
 	<param name="radius" type="float" default="10" />
 	<param name="num_samples" type="int" default="5" />
+
+	<param name="enable_spatial_2_DIF" type="int" default="1" />
 	<language name="glsl" version="1.5">
 		<bind param="colTex" program="fp" />
 		<bind param="norDepthTex" program="fp" />
@@ -64,6 +66,8 @@
 		<bind param="eye" program="fp" />
 		<bind param="radius" program="fp" />
 		<bind param="num_samples" program="fp" />
+
+		<bind param="enable_spatial_2_DIF" program="fp" />
 
 		<include source="c74.noise.funcs.glsl" program="fp" />
 		<include source="mm_restir.structures.spatial.DIF.glsl" program="fp" />
@@ -99,6 +103,8 @@ void main(void) {
 
 layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outBestWpos;
+
+uniform int enable_spatial_2_DIF;
 
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112 + num_samples);
@@ -178,19 +184,6 @@ sample get_sample(int index){
 	s.id = lookup4.w;
 	return s;
 }
-/*
-sample get_sample_dir_col_for_env_jittered(int index, inout uint seed){
-
-	sample s;
-	s.uv = index2uv_for_env(index);
-	ivec2 iuv = ivec2(s.uv);
-	vec2 jitter_uv = s.uv + 2*vec2(RandomFloat01(seed)-0.5, RandomFloat01(seed)-0.5);
-	s.col = texture(environmentMap, jitter_uv).rgb;
-	s.nor = uv2dir(jitter_uv);
-	s.pos = s.nor; //use the position variable to pass the direction for reprojection
-	return s;
-}
-*/
 
 sample get_environment_sample(in vec3 candidate_dir){
 	sample s;
@@ -215,12 +208,11 @@ sample get_sample_pos_col(int index){
 
 vec3 get_radiance(in sample this_s, in sample test_s){
 
-	vec3 diff = test_s.pos - this_s.pos;
-	vec3 dir = normalize(diff);//diff / dist;
+	vec3 dir = normalize(test_s.pos - this_s.pos);
 	float lambert = max(0.0, dot(this_s.nor, dir));
-	//float PDF = 1 / (M_TAU);
-	//return this_s.alb * lambert * test_s.col / PDF;
-	return M_TAU * this_s.alb * lambert * test_s.col;		
+	//float PDF = 1 / M_TAU;
+	//return this_s.alb * lambert * test_s.col / PDF;	
+	return M_TAU * this_s.alb * lambert * test_s.col;										
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
@@ -267,112 +259,113 @@ void main(void) {
 	vec3 candidate_dir;
 
 
-	//SPATIAL REUSE_____________________________________________________________________________
+	if(enable_spatial_2_DIF == 1){
 
-	if(this_s.depth != 1){ //if not background
-		vec4 spatial_reservoir = vec4(0);
+		//SPATIAL REUSE_____________________________________________________________________________
 
-		// combine current reservoir
-		spatial_reservoir = updateReservoir(spatial_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+		if(this_s.depth != 1){ //if not background
+			vec4 spatial_reservoir = vec4(0);
 
-		vec4 neighbor_reservoir;
+			// combine current reservoir
+			spatial_reservoir = updateReservoir(spatial_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
 
-		float a = 1./(1. + this_s.nor.z);
-    	float b = -this_s.nor.x*this_s.nor.y*a;
-    	vec3 f = vec3(1. - this_s.nor.x*this_s.nor.x*a, b, -this_s.nor.x);
-   		vec3 r = vec3(b, 1. - this_s.nor.y*this_s.nor.y*a , -this_s.nor.y);
+			vec4 neighbor_reservoir;
 
-   		mat3 TBN = mat3(r, f, this_s.nor);
+			float a = 1./(1. + this_s.nor.z);
+	    	float b = -this_s.nor.x*this_s.nor.y*a;
+	    	vec3 f = vec3(1. - this_s.nor.x*this_s.nor.x*a, b, -this_s.nor.x);
+	   		vec3 r = vec3(b, 1. - this_s.nor.y*this_s.nor.y*a , -this_s.nor.y);
 
-   		ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
-   		float index = float(frame)*float(num_samples);
-   		float occ = texelFetch(occTex, ivec2(jit_in.uv)).r;
+	   		mat3 TBN = mat3(r, f, this_s.nor);
 
-		for(int i = 0; i < num_samples; i++){
+	   		ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
+	   		float index = float(frame)*float(num_samples);
+	   		float occ = texelFetch(occTex, ivec2(jit_in.uv)).r;
 
-			float tile_selector = mod(index + float(i), 64.0);
-			ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
-			vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
-			vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ, 0);
+			for(int i = 0; i < num_samples; i++){
 
-   			disk = TBN * disk;
-   			disk += this_s.pos;
-   			vec4 proj_disk = projmat * vec4(disk, 1);
-   			proj_disk.xy /= proj_disk.w;
-   			vec2 proj_disk_uv = vec2(textureMatrix0 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
-			ivec2 neiUV = ivec2(proj_disk_uv);//ivec2(floor(get_sample_uv(seed, radius, i)) + 0.5);//this_s.uv + offset;
-			
-			if(	neiUV.x < 0 || neiUV.y < 0 || 
-				neiUV.x > texDim.x-1 || neiUV.y > texDim.y-1) continue;
+				float tile_selector = mod(index + float(i), 64.0);
+				ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
+				vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
+				vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ, 0);
 
-			vec4 candidateNorDepth = texelFetch(norDepthTex, neiUV);
+	   			disk = TBN * disk;
+	   			disk += this_s.pos;
+	   			vec4 proj_disk = projmat * vec4(disk, 1);
+	   			proj_disk.xy /= proj_disk.w;
+	   			vec2 proj_disk_uv = vec2(textureMatrix0 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
+				ivec2 neiUV = ivec2(proj_disk_uv);//ivec2(floor(get_sample_uv(seed, radius, i)) + 0.5);//this_s.uv + offset;
+				
+				if(	neiUV.x < 0 || neiUV.y < 0 || 
+					neiUV.x > texDim.x-1 || neiUV.y > texDim.y-1) continue;
 
-			if(candidateNorDepth.w == 0.0 || candidateNorDepth.w == 1.0) continue;
-			
-			vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
+				vec4 candidateNorDepth = texelFetch(norDepthTex, neiUV);
 
-			if(	dot(this_s.nor, candidateNorDepth.xyz) < 0.95 
-				 ||  length(this_s.pos - candidatePos) > 0.3 ) continue;
+				if(candidateNorDepth.w == 0.0 || candidateNorDepth.w == 1.0) continue;
+				
+				vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
+
+				if(	dot(this_s.nor, candidateNorDepth.xyz) < 0.95 
+					 ||  length(this_s.pos - candidatePos) > 0.3 ) continue;
 
 
-			neighbor_reservoir = texelFetch(reservoirTex, neiUV);
-			neighbor_reservoir.z = min(reservoir.z, neighbor_reservoir.z);
+				neighbor_reservoir = texelFetch(reservoirTex, neiUV);
+				neighbor_reservoir.z = min(reservoir.z, neighbor_reservoir.z);
 
-			if(neighbor_reservoir.y >= 0){
+				if(neighbor_reservoir.y >= 0){
 
-				test_s = get_sample_pos_col(int(neighbor_reservoir.y));
+					test_s = get_sample_pos_col(int(neighbor_reservoir.y));
+					p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
+
+				} else {
+
+					candidate_dir = texelFetch(p_hatTex, neiUV).yzw;
+					test_s = get_environment_sample(candidate_dir);
+					p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
+				}
+
+				spatial_reservoir = updateReservoir(spatial_reservoir, neighbor_reservoir.y, p_hat * neighbor_reservoir.w * neighbor_reservoir.z, neighbor_reservoir.z, seed, candidate_dir, best_dir);
+
+			}		
+
+			if(spatial_reservoir.y >= 0){
+				test_s = get_sample_pos_col(int(spatial_reservoir.y));
 				p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
 
 			} else {
-
-				candidate_dir = texelFetch(p_hatTex, neiUV).yzw;
-				test_s = get_environment_sample(candidate_dir);
+				test_s = get_environment_sample(best_dir);
 				p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
 			}
 
-			spatial_reservoir = updateReservoir(spatial_reservoir, neighbor_reservoir.y, p_hat * neighbor_reservoir.w * neighbor_reservoir.z, neighbor_reservoir.z, seed, candidate_dir, best_dir);
-
-		}		
-
-		if(spatial_reservoir.y >= 0){
-			test_s = get_sample_pos_col(int(spatial_reservoir.y));
-			p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
-
-		} else {
-			test_s = get_environment_sample(best_dir);
-			p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
+			spatial_reservoir.w = p_hat > 0 ? (1 / max(p_hat, 0.0001)) * (spatial_reservoir.x / max(spatial_reservoir.z, 0.0001)) : 0.0;
+			reservoir = spatial_reservoir;
 		}
 
-		spatial_reservoir.w = p_hat > 0 ? (1 / max(p_hat, 0.0001)) * (spatial_reservoir.x / max(spatial_reservoir.z, 0.0001)) : 0.0;
-		reservoir = spatial_reservoir;
+		//______________________________________________________________________________________________________________________________________________
 	}
-	
-
-	//______________________________________________________________________________________________________________________________________________
-
 
 	if(reservoir.y >= 0){
 
 		test_s = get_sample(int(reservoir.y));
 
-		if(!shadowRay(this_s, test_s, seed)){
-			reservoir.w = 0.0;
-		} else {
+		//if(!shadowRay(this_s, test_s, seed)){
+		//	reservoir.w = 0.0;
+		//} else {
 			p_hat = luminance(get_radiance(this_s, test_s));
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		}	
+		//}	
 
 		outBestWpos = vec4( (invV * vec4(test_s.pos, 1)).xyz, this_s.id);
 
 	} else {
 		test_s = get_environment_sample(best_dir);
 
-		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
-			reservoir.w = 0.0;
-		} else {
+		//if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+		//	reservoir.w = 0.0;
+		//} else {
 			p_hat = luminance(get_radiance_for_env(this_s, test_s));
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		}	
+		//}	
 
 		outBestWpos = vec4(best_dir, 1);
 	}
