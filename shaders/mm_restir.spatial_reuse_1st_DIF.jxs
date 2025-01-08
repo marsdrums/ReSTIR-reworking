@@ -218,15 +218,17 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 	vec3 diff = test_s.pos - this_s.pos;
 	vec3 dir = normalize(diff);//diff / dist;
 	float lambert = max(0.0, dot(this_s.nor, dir));
-	float PDF = 1 / (M_TAU);
-	return this_s.alb * lambert * test_s.col / PDF;
+	//float PDF = 1 / (M_TAU);
+	//return this_s.alb * lambert * test_s.col / PDF;
+	return M_TAU * this_s.alb * lambert * test_s.col;		
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
-	float PDF = 1 / (M_TAU);
-	return this_s.alb * lambert * test_s.col / PDF;							
+	//float PDF = 1 / (M_TAU);
+	//return this_s.alb * lambert * test_s.col / PDF;		
+	return M_TAU * this_s.alb * lambert * test_s.col;							
 }
 
 vec4 updateReservoir(vec4 reservoir, float lightToSample, float weight, float c, uint seed, in vec3 candidate_dir, out vec3 best_dir)

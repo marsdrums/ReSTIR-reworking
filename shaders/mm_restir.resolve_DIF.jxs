@@ -173,7 +173,7 @@ sample get_sample(int index){
 	vec4 lookup1 = texelFetch(norDepthTex, iuvFull);
 	//vec4 lookup2 = texelFetch(velTex, iuvFull);
 	vec4 lookup3 = texelFetch(posTex, iuvFull);
-	//vec4 lookup4 = texelFetch(albTex, iuvFull);
+	vec4 lookup4 = texelFetch(albTex, iuvFull);
 	//s.col = lookup0.rgb;
 	s.nor = lookup1.xyz;
 	//s.vel = lookup2.xy;
@@ -181,7 +181,7 @@ sample get_sample(int index){
 	s.depth = lookup1.w;
 	//s.index = index;
 	s.uv = uv;
-	//s.alb = lookup4.rgb;
+	s.alb = lookup4.rgb;
 	//s.id = lookup4.w;
 	return s;
 }
@@ -226,14 +226,14 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 	vec3 dir = normalize(diff);//diff / dist;
 	float lambert = max(0.0, dot(this_s.nor, dir));
 	float PDF = 1 / (M_TAU);
-	return /*this_s.alb * */lambert * test_s.col / PDF;
+	return this_s.alb * lambert * test_s.col / PDF;
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
 	float PDF = 1 / (M_TAU);
-	return /*this_s.alb * */lambert * test_s.col / PDF;							
+	return this_s.alb * lambert * test_s.col / PDF;							
 }
 /*
 bool visible(in sample this_s, in sample test_s, inout uint seed){
@@ -372,7 +372,7 @@ void main(void) {
 			if(visible(this_s, test_s, seed)){
 				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
 				vec3 radiance = get_radiance(this_s, test_s);
-				float p_hat = luminance(radiance) * (this_s.depth + 1);
+				float p_hat = luminance(radiance);// * (this_s.depth + 1);
 				if(p_hat <= 0)continue;
 				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 				radiance *= reservoir.w;
@@ -390,8 +390,8 @@ void main(void) {
 
 				float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
 				vec3 radiance = get_radiance_for_env(this_s, test_s);
-				float p_hat = luminance(radiance) * (this_s.depth + 1);
-				if(p_hat <= 0)continue;
+				float p_hat = luminance(radiance);// * (this_s.depth + 1);
+				if(p_hat <= 0) continue;
 				reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 				radiance *= reservoir.w;
 				outColor.rgb += radiance*this_weight;
@@ -434,6 +434,7 @@ void main(void) {
 	//}
 
 	outColor.rgb /= weight;
+	outColor.rgb /= this_s.alb;
 
 }
 ]]>
