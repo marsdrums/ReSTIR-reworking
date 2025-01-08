@@ -105,7 +105,7 @@ The rejection criteria are the same as the diffuse spatial reuse pass (normals e
 (shader: restir.resolve_REF.jxs)
 
 The resolution pass is very similar to the one used for the diffuse compoent. The differences are:
-- The resolve pass for reflections uses 8 samples instead of 8.
+- The resolve pass for reflections uses 8 samples instead of 4.
 - Occlusion is no longer taken into account.
 - The radius for looking up samples into neighboring reservoirs is affected by roughness.
 - Instead of a normal-oriented disk, neighboring reservoirs sampled by projecting the specular lobe in screen-space and sampling from within it.
