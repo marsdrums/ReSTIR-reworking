@@ -29,7 +29,7 @@ Random pixels are sampled from the Previous-frame composited image. The random d
 >[!NOTE]
 > We could ray-trace from the G-Buffer to find intersections with the on-screen geometry; since ReSTIR is all about postponing visibility checks, i'm currently collecting light samples from the texture directly, without worring about them being visible, and skipping costly ray-tracing operations. Visibility is checked only later on. Moreover, since the ray marching happens in screen space, visibility checks are performed by taking a limited number of steps along the ray, making the operation much lighter than world-space ray tracing.
 
-### 2) Gathering samples from the a selection of the brightest pixels
+### 2) Gathering samples from a selection of the brightest pixels
 
 To increase the chances of gathering significant (bright) samples, i'm performing a selection of the brightest pixels prior to sampling. The selection is performed by comparing four pixels within 2x2 tiles, and retrieving the brighntess and the texture coordinates of the brightest pixels. The selection involves some randomness to keep the choice unbiased - brighter pixels have a higher chance of being selected. The output texture is then downscaled by a factor of 2. The process is repeated several times, ending with a selection of a handful of very bright pixels. This works as a sort of pre-selection of the best candidate pixels. 
 ( shaders: restir.calc_uv_and_luma.jxs, and restir.find_brightest_pixel.jxs )
