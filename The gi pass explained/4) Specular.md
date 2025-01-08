@@ -119,13 +119,13 @@ Like with diffuse, the resulting color isn't modulated by albedo to optimize the
 
 Temporal filtering is applied following the same exact algorithm as the diffuse component. The only difference regards velocity vectors. 
 
-Velocity vectors are very useful to reproject the diffuse component, but less than ideal for temporally reproject reflections. To the temporal filtering pass i'm providing to distinc sets of velocity vectors - one coming from the render target, and one specifically crafted for reprojecting reflections. The method i've followed to implement reliable velocity vector for reflections is this:
+Velocity vectors are very useful to reproject the diffuse component, but less than ideal for temporally reproject reflections. To the temporal filtering pass i'm providing two distinc sets of velocity vectors - one coming from the render target, and one specifically crafted for reprojecting reflections. The method i've followed to implement reliable velocity vector for reflections is this:
 https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf
 
 >[!WARNING]
-> The framework in which this method is applied is quite different from ours. I tried adapring the methos to work in our context with mixed results. I'll go more into the details of what's not working in the final section.
+> The framework in which this method is applied is quite different from ours. I tried adapring the method to work in our context with mixed results. I'll go more into the details of what's not working in the final section.
 
-In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending blending colors according to local staistics. This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer.
+In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending blending colors according to local staistics (mean, and squared variance). This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer.
 
 >[!WARNING]
-> Once again, i'm getting mixed results with this kind of temporal reprojection. While it effectively improves temporal coherence for very smooth materials and very rough materials, it's unclear how balance it with medium-roughness materials.
+> Once again, i'm getting mixed results with this kind of temporal reprojection. While it effectively improves temporal coherence for very smooth materials and very rough materials, it's unclear how to balance it with medium-roughness materials.

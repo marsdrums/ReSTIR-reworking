@@ -31,7 +31,7 @@ $$
 L_o(\mathbf{x}, \omega_o) = L_e(\mathbf{x}, \omega_o) + \int_{H^{2}} f_r(\mathbf{x}, \omega_o, \omega_i) L_i(\mathbf{x}, \omega_i) \cos(\theta_i) d\omega_i
 $$
 
-There's no computable solution to the rendering equation, but we can estimate its result. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the light contributions, we can estimate the solution to the rendering equation.
+There's no computable solution to the rendering equation, but we can estimate its result using the Monte Carlo method. To estimate it, we can raytrace from a point on a surface in random directions and collect radiance samples - averaging the light contributions, we can estimate the solution to the rendering equation.
 The problem with this approach, is that of all the taken samples, not all of them are "important", as many won't bring much light to the pixel being shaded. If we can afford few samples per frame, it would be better to make the best out of the available resources.
 
 Importance sampling is about shooting rays where it really matters.
