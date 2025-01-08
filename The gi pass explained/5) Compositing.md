@@ -1,0 +1,4 @@
+# Compositing
+
+![](./images/compositing.png)
+
