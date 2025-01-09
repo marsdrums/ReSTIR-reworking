@@ -256,7 +256,6 @@ void main(void) {
 
 		} else {
 
-			//*** read best dir
 			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
 			test_s = get_environment_sample(best_dir, seed);
 

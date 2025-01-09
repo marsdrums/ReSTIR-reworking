@@ -377,7 +377,7 @@ vec4 get_sample_uv_or_dir(in sample this_s, inout uint seed){
 	vec4 rayDir_reflectance = generate_ray_from_GGX_VNDF(this_s);
 
 	vec3 pivot = rayDir_reflectance.xyz;
-	float reflectance = 1;//rayDir_reflectance.w; //*** WHY DOESN'T WORK?!?
+	float reflectance = rayDir_reflectance.w; //*** WHY DOESN'T WORK?!?
 
 	//if the ray is shot below the floor, re-shot it randomly
 	bool valid = false;
@@ -547,7 +547,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 		    sample_index = int(uv2index(sample_uv_or_dir.xy));
 		    test_s = get_sample_pos_col(sample_index);
 			p_hat = length( get_specular_radiance(this_s, test_s) );
-			//p_hat /= sample_uv_or_dir.w;
+			p_hat /= sample_uv_or_dir.w;
 			reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);	
 
 		} else { //if the sample comes from the environment
@@ -555,7 +555,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 			candidate_dir = sample_uv_or_dir.xyz;
 	    	test_s = get_environment_sample(candidate_dir, seed, this_s.rou);
 			p_hat = length( get_radiance_for_env(this_s, test_s) );	
-			//p_hat /= -sample_uv_or_dir.w;
+			p_hat /= -sample_uv_or_dir.w;
 			reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);	
 		}
 		
@@ -619,7 +619,7 @@ void main(void) {
 
 	float disocclusion = texelFetch(velTex, ivec2(jit_in.uv)).b;
 	//ivec2 reprojected_uv = ivec2(reprojected_uv);
-	if(valid_reprojection(this_s, vec2(reprojected_uv)) && disocclusion < 0.1){
+	if(valid_reprojection(this_s, vec2(reprojected_uv))){
 
 		vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
 		//prev_reservoir.w *= 0.2;
@@ -685,19 +685,19 @@ void main(void) {
 
 	if(reservoir.y >= 0){ //if the sample is from the viewport
 
-		test_s = get_sample(int(reservoir.y));
+		//test_s = get_sample(int(reservoir.y));
 
-		float p_hat = length(get_specular_radiance(this_s, test_s));
-		reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		//float p_hat = length(get_specular_radiance(this_s, test_s));
+		//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 
 		outPhat = vec4( p_hat, (invV * vec4(test_s.pos, 1)).xyz);
 
 	} else { //if the sample is from the environment map
 
-		test_s = get_environment_sample(best_dir, seed, this_s.rou);
+		//test_s = get_environment_sample(best_dir, seed, this_s.rou);
 
-		p_hat = length( get_radiance_for_env(this_s, test_s) );
-		reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		//p_hat = length( get_radiance_for_env(this_s, test_s) );
+		//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		outPhat = vec4(p_hat, best_dir);
 	}
 

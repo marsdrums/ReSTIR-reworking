@@ -435,7 +435,7 @@ bool background(in sample this_s){
 	return this_s.pos.x == 1.0 && this_s.pos.y == 1.0 && this_s.pos.z == 1.0;
 }
 
-
+/*
 vec2 pos2uv(in vec3 p){
 
 	vec4 projP = projmat * vec4(p, 1);
@@ -443,6 +443,7 @@ vec2 pos2uv(in vec3 p){
 	return floor( ( textureMatrix0 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
 
 }
+*/
 /*
 bool visible_env(in sample this_s, in sample test_s, inout uint seed){
 

@@ -8,7 +8,7 @@
 	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
 	<param name="pos" type="vec3" state="POSITION" />
 	<param name="uv" type="vec2" state="TEXCOORD" />
-	<param name="variance_clipping_gamma" type="float" default="2" />
+	<param name="variance_clipping_gamma_DIF" type="float" default="3" />
 	<language name="glsl" version="1.5">
 		<bind param="imgTex" program="fp" />
 		<bind param="velTex" program="fp" />
@@ -18,7 +18,7 @@
 		<bind param="textureMatrix0" program="vp" />
 		<bind param="pos" program="vp" />
 		<bind param="uv" program="vp" />
-		<bind param="variance_clipping_gamma" program="fp" />
+		<bind param="variance_clipping_gamma_DIF" program="fp" />
 		<program name="vp" type="vertex"  >
 <![CDATA[
 #version 330 core
@@ -45,7 +45,7 @@ void main(void) {
 #version 330 core
 uniform sampler2DRect imgTex, velTex, accumTex;
 uniform vec2 texDim;
-uniform float variance_clipping_gamma;
+uniform float variance_clipping_gamma_DIF;
 
 in jit_PerVertex {
 	smooth vec2 uv;
@@ -66,6 +66,7 @@ struct prev{
 layout (location = 0) out vec4 outCol;
 
 curr read_current_textures(){
+
 	ivec2 iuv = ivec2(jit_in.uv);
 
 	curr c;
@@ -84,47 +85,109 @@ bool valid_reprojection(vec2 uv){
 	return(uv.x >= 0 && uv.y >= 0 && uv.x < texDim.x && uv.y < texDim.y);
 }
 
-float luma(vec3 x){ return dot(x, vec3(0.299, 0.587, 0.144)); }
+vec3 rgb2ycocg(in vec3 rgb)
+{
+    float co = rgb.r - rgb.b;
+    float t = rgb.b + co / 2.0;
+    float cg = rgb.g - t;
+    float y = t + cg / 2.0;
+    return vec3(y, co, cg);
+}
+
+
+vec3 ycocg2rgb(in vec3 ycocg)
+{
+    float t = ycocg.r - ycocg.b / 2.0;
+    float g = ycocg.b + t;
+    float b = t - ycocg.g / 2.0;
+    float r = ycocg.g + b;
+    return vec3(r, g, b);
+}
+
+vec3 clipToAABB(in vec3 cOld, in vec3 cNew, in vec3 centre, in vec3 halfSize)
+{
+    if (all(lessThanEqual(abs(cOld - centre), halfSize))) {
+        return cOld;
+    }
+    
+    vec3 dir = (cNew - cOld);
+    vec3 near = centre - sign(dir) * halfSize;
+    vec3 tAll = (near - cOld) / dir;
+    float t = 1e20;
+    for (int i = 0; i < 3; i++) {
+        if (tAll[i] >= 0.0 && tAll[i] < t) {
+            t = tAll[i];
+        }
+    }
+    
+    if (t >= 1e20) {
+		return cOld;
+    }
+    return cOld + dir * t;
+}
+
+
+
+vec4 applyTemporalFilter(in curr c){
+
+	//COLOR CLIPPING
+	ivec2 iuv = ivec2(jit_in.uv);
+	vec3 NearColor0 = texelFetch(imgTex, iuv + ivec2(+1, +0)).rgb;
+	vec3 NearColor1 = texelFetch(imgTex, iuv + ivec2(+0, +1)).rgb;
+	vec3 NearColor2 = texelFetch(imgTex, iuv + ivec2(-1, +0)).rgb;
+	vec3 NearColor3 = texelFetch(imgTex, iuv + ivec2(+0, -1)).rgb;
+	
+	// Compute the two moments
+	vec3 M1 = c.col + NearColor0 + NearColor1 + NearColor2 + NearColor3;
+	vec3 M2 = c.col * c.col + NearColor0 * NearColor0 + NearColor1 * NearColor1 
+					+ NearColor2 * NearColor2 + NearColor3 * NearColor3;
+	
+	vec3 MU = M1 * 0.2;
+	vec3 Sigma = sqrt(M2 * 0.2 - MU * MU) * variance_clipping_gamma_DIF;
+	
+	vec3 BoxMin = MU - Sigma;
+	vec3 BoxMax = MU + Sigma;
+
+	prev p;
+	p.col = texture(accumTex, c.repUV).rgb;
+	p.col = clamp(p.col, BoxMin, BoxMax);
+
+	return vec4( mix( p.col, c.col, c.weight ), 1.0);
+}
 
 void main(void) {
 
 	curr c = read_current_textures();
+	outCol = valid_reprojection(c.repUV) ? applyTemporalFilter(c) : vec4(c.col, 1.0);
+/*
+    // Find out where the current pixel was in the previous frame and
+    // get the colour at that location.
+    vec3 colorOld = texture(accumTex, c.repUV).rgb;
+    
+    // Look up colours for the immediate neighbourhood of the pixel in
+    // this frame. Calculate the first two moments of their distribution
+    // (i.e. mean and standard deviation).
+ 	vec2 fcOffsets[4];
+    fcOffsets[0] = vec2(-1.0,  0.0);
+    fcOffsets[1] = vec2( 1.0,  0.0);
+    fcOffsets[2] = vec2( 0.0, -1.0);
+    fcOffsets[3] = vec2( 0.0,  1.0);
+    
+    vec3 mean = rgb2ycocg(c.col);
+    vec3 stddev = mean * mean;
+    for (int i = 0; i < 4; i++) {
+        vec3 c = rgb2ycocg( texture(imgTex, jit_in.uv + fcOffsets[i]).rgb );
+        mean += c;
+        stddev += c * c;
+    }
+    mean /= 5.0;
+    stddev = sqrt(stddev / 5.0 - mean * mean) * variance_clipping_gamma_DIF;
 
-	if(valid_reprojection(c.repUV)){
-
-		//COLOR CLIPPING
-		ivec2 iuv = ivec2(jit_in.uv);
-		vec3 NearColor0 = texelFetch(imgTex, iuv + ivec2(1, 0)).rgb;
-		vec3 NearColor1 = texelFetch(imgTex, iuv + ivec2(0, 1)).rgb;
-		vec3 NearColor2 = texelFetch(imgTex, iuv + ivec2(-1, 0)).rgb;
-		vec3 NearColor3 = texelFetch(imgTex, iuv + ivec2(0, -1)).rgb;
-		
-		// Compute the two moments
-		vec3 M1 = c.col + NearColor0 + NearColor1 + NearColor2 + NearColor3;
-		vec3 M2 = c.col * c.col + NearColor0 * NearColor0 + NearColor1 * NearColor1 
-			+ NearColor2 * NearColor2 + NearColor3 * NearColor3;
-		
-		vec3 MU = M1 * 0.2;
-		vec3 Sigma = sqrt(M2 * 0.2 - MU * MU) * variance_clipping_gamma;
-		
-		vec3 BoxMin = MU - Sigma;
-		vec3 BoxMax = MU + Sigma;
-
-		prev p;
-		p.col = texture(accumTex, c.repUV).rgb;
-		p.col = clamp(p.col, BoxMin, BoxMax);
-
-		//inalColor = clamp(finalColor, BoxMin, BoxMax);
-
-		outCol.rgb = mix( p.col, c.col, c.weight );
-		//outCol.rgb = mix( p.col, c.col, 0.001 );
-	
-	} else {
-
-		outCol.rgb = c.col;
-	}
-
-	outCol.a = 1;
+    colorOld = ycocg2rgb(clipToAABB(rgb2ycocg(colorOld), rgb2ycocg(c.col), mean, stddev));
+    
+    outCol.rgb = mix(colorOld, c.col, 0.1);
+    outCol.a = 1.0;
+*/
 }
 ]]>
 </program>

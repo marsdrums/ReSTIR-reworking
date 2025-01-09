@@ -1,5 +1,6 @@
 in jit_PerVertex {
 	smooth vec2 uv;
+	smooth vec2 uvFull;
 	smooth vec3 dir;
 	flat vec4 plane_near;
 	flat vec4 plane_far;
@@ -14,7 +15,7 @@ uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, posTex, alb
 uniform samplerCube environmentMap;
 uniform int frame;
 uniform vec2 texDim, mapSize;
-uniform mat4 prevMVP, invV, MV, MVP, VP, V, projmat, textureMatrix0;
+uniform mat4 prevMVP, invV, MV, MVP, VP, V, projmat, textureMatrix1;
 uniform float farClip;
 uniform vec3 eye;
 
