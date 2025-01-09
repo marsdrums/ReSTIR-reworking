@@ -256,7 +256,7 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, dir));
 	//float PDF = 1 / M_TAU;
 	//return this_s.alb * lambert * test_s.col / PDF;	
-	return M_TAU * this_s.alb * lambert * test_s.col;										
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;										
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
@@ -264,7 +264,7 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
 	//float PDF = 1 / M_TAU;
 	//return this_s.alb * lambert * test_s.col / PDF;		
-	return M_TAU * this_s.alb * lambert * test_s.col;					
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;					
 }
 
 vec4 updateReservoir(vec4 reservoir, float lightToSample, float weight, float c, uint seed, in vec3 candidate_dir, out vec3 best_dir)
@@ -299,19 +299,18 @@ vec2 pos2uv(in vec3 p){
 
 vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir){
 
+	if(background(this_s)) return vec4(0.0);
+
     vec4 reservoir = vec4(0); //curr reservoir
 
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-	int M = 1;//10;//frame % 2 == 0 ? 4 : 1; //num of from the view port
-	int J = 1;//frame % 2 == 0 ? 4 : 1; //num of samples from the environment map
-	//int K = 0;//20; //num of samples from selected (brightest) pixels
+	int M = 16;//num of from the view port
+	int J = 16;//num of samples from the environment map
 
 	int sample_index;
 	vec2 sample_uv;
 	vec3 candidate_dir;
-
-	if(background(this_s)) return vec4(0.0);
 
 	//initial selection of 1 sample of M
 	for (int i = M; i > 0; i--)
@@ -322,22 +321,10 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	    if(background(test_s)) continue;
 
 		p_hat = luminance( get_radiance(this_s, test_s) );
+		p_hat /= 1 / M_TAU;//(texDim.x * texDim.y); //Divide by PDF
 	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
 	}
-/*
-	//initial selection of 1 sample of M
-	for (int i = K; i > 0; i--)
-	{
-		sample_uv = get_sample_uv_from_selected(seed);
-		vec2 selectedUV = texelFetch(selectedSamplesTex, ivec2(sample_uv)).xy;
-	    sample_index = int(uv2index(selectedUV));
-	    sample test_s = get_sample_pos_col(sample_index);
-	    if(background(test_s)) continue;
 
-		p_hat = luminance( get_radiance(this_s, test_s) );
-	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
-	}
-*/
 	//sample the environment map
 	for (int k = J; k > 0; k--)
 	{
@@ -345,6 +332,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	  	sample test_s = get_environment_sample(candidate_dir);
 
 		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
+		p_hat /= 1 / M_TAU; //Divide by PDF
 	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
 	}
 
@@ -355,17 +343,17 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 		sample test_s = get_sample(int(reservoir.y));
 		p_hat = luminance( get_radiance(this_s, test_s) );
-		//if(!shadowRay(this_s, test_s, seed)){
-		//	p_hat = 0.0;
-		//}
+		if(!shadowRay(this_s, test_s, seed)){
+			p_hat = 0.0;
+		}
 
 	} else { //if it's a sample from the environment map
 
 		sample test_s = get_environment_sample(best_dir);
 		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
-		//if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
-		//	p_hat = 0.0;
-		//}
+		if(!shadowRayForEnv(this_s, test_s)){
+			p_hat = 0.0;
+		}
 	}
 
 	reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
@@ -418,11 +406,11 @@ void main(void) {
 					prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
 					test_s = get_sample(int(prev_reservoir.y));
 
+					p_hat = shadowRay(this_s, test_s, seed) && !background(test_s)? 
+							luminance( get_radiance(this_s, test_s) ) :
+							0.0;
 
-					p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
-					if(background(test_s)) p_hat = 0.0;
-
-					prev_reservoir.z =  min(20*reservoir.z, prev_reservoir.z);
+					prev_reservoir.z =  min(20, prev_reservoir.z);//min(20*reservoir.z, prev_reservoir.z);
 					temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, dummy_dir, dummy_dir);
 				}
 
@@ -433,16 +421,16 @@ void main(void) {
 				//prev_reservoir.y = float(uv2index_for_env(prev_best_wpos_uv));
 				test_s = get_environment_sample(prev_best_dir);
 
-				p_hat = luminance( get_radiance_for_env(this_s, test_s) );// * (this_s.depth + 1);
-				if(background(test_s)) p_hat = 0.0;
+				p_hat = shadowRayForEnv(this_s, test_s) ? 
+						luminance( get_radiance_for_env(this_s, test_s) ) :
+						0.0;
 
-
-				prev_reservoir.z = min(20*reservoir.z, prev_reservoir.z);
+				prev_reservoir.z = min(20, prev_reservoir.z);//min(20*reservoir.z, prev_reservoir.z);
 				temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
 
 			}
 
-			temporal_reservoir.z = reservoir.z + prev_reservoir.z;
+			//temporal_reservoir.z = reservoir.z + prev_reservoir.z;
 			
 			if(temporal_reservoir.y >= 0){
 				test_s = get_sample(int(temporal_reservoir.y));
@@ -458,30 +446,30 @@ void main(void) {
 		}
 		//___________________________________________________________________________________________________________________________________________________________
 	}
-
+/*
 	if(reservoir.y >= 0){ //if the sample is from the viewport
 
 		test_s = get_sample(int(reservoir.y));
 
-		if(!shadowRay(this_s, test_s, seed)){
-			reservoir.w = 0.0;
-		} else {
+		//if(!shadowRay(this_s, test_s, seed)){
+		//	reservoir.w = 0.0;
+		//} else {
 			float p_hat = luminance( get_radiance(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		}
+		//}
 
 	} else { //if the sample is from the environment map
 
 		test_s = get_environment_sample(best_dir);
 
-		if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
-			reservoir.w = 0.0;
-		} else {
+		//if(!shadowRayForEnv(this_s, test_s)){
+		//	reservoir.w = 0.0;
+		//} else {
 			p_hat = luminance( get_radiance_for_env(this_s, test_s) );
 			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-		}
+		//}
 	}
-
+*/
 	outReservoir = reservoir;
 	outPhat = vec4(p_hat, best_dir);
 }

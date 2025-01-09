@@ -20,16 +20,14 @@ bool shadowRay(in sample this_s, in sample test_s, inout uint seed){
     return true;
 }
 
-bool shadowRayForEnv(in sample this_s, in sample test_s, inout uint seed, in mat4 textureMatrix){
-
-    //return false;
+bool shadowRayForEnv(in sample this_s, in sample test_s){
 
     vec3 end_pos = this_s.pos + test_s.nor*6; 
 
     vec4 projP = projmat * vec4(end_pos, 1);
-    projP.xy = (projP.xy/projP.w) * 0.5 + 0.5;
-    vec2 end_uv = ( textureMatrix * vec4(projP.xy,0,1) ).xy;
-    float num_iterations = 100;//length(test_s.uv - end_uv);
+    vec2 end_uv = (texDim-1) * (0.5*projP.xy/projP.w + 0.5);//( textureMatrix * vec4(projP.xy,0,1) ).xy;
+
+    float num_iterations = 60;//length(test_s.uv - end_uv);
     float step = 1 / num_iterations;
     float start = 0.02;//step;//RandomFloat01(seed)*0.01;//step * (RandomFloat01(seed) + 0.5);
 

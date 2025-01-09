@@ -170,7 +170,7 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, dir));
 	//float PDF = 1 / M_TAU;
 	//return this_s.alb * lambert * test_s.col / PDF;	
-	return M_TAU * this_s.alb * lambert * test_s.col;										
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;										
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
@@ -178,7 +178,7 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
 	//float PDF = 1 / (M_TAU);
 	//return this_s.alb * lambert * test_s.col / PDF;
-	return M_TAU * this_s.alb * lambert * test_s.col;							
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;							
 }
 
 float saturate(in float x){ return clamp(x, 0, 1); }
@@ -205,8 +205,8 @@ void main(void) {
 	outColor = vec4(0,0,0,1);
 
 	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
-	float radius = mix(0., 30., occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
-	int NUM_SAMPLES = 3;
+	float radius = mix(0., 30., occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
+	int NUM_SAMPLES = 4;
 	float weight = 0.0001;
 
 	for(int i = NUM_SAMPLES; i > 0; i--){

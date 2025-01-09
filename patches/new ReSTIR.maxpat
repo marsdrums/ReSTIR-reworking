@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 34.0, 100.0, 1230.0, 898.0 ],
+		"rect" : [ 39.0, 100.0, 1230.0, 898.0 ],
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
@@ -131,26 +131,6 @@
 					"outlettype" : [ "jit_geometry", "" ],
 					"patching_rect" : [ 666.0, 1088.0, 179.0, 22.0 ],
 					"text" : "jit.geom.subdivide @iterations 2"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"filename" : "taa.jxp",
-					"id" : "obj-137",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_gl_texture", "", "" ],
-					"patching_rect" : [ 143.0, 414.0, 196.0, 22.0 ],
-					"text" : "jit.gl.pass @fxname taa @quality hi",
-					"textfile" : 					{
-						"filename" : "taa.jxp",
-						"flags" : 0,
-						"embed" : 0,
-						"autowatch" : 1
-					}
-
 				}
 
 			}
@@ -1070,14 +1050,14 @@
 			}
 , 			{
 				"box" : 				{
-					"attr" : "shadows",
+					"attr" : "enable",
 					"id" : "obj-43",
 					"maxclass" : "attrui",
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1091.0, 57.0, 150.0, 22.0 ]
+					"patching_rect" : [ 1101.0, 70.0, 150.0, 22.0 ]
 				}
 
 			}
@@ -1755,7 +1735,8 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 230.000002443790436, 276.00000411272049, 150.0, 22.0 ]
+					"patching_rect" : [ 593.0, 259.0, 197.0, 22.0 ],
+					"text_width" : 146.0
 				}
 
 			}
@@ -2218,13 +2199,6 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-132", 0 ],
-					"source" : [ "obj-137", 1 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
 					"destination" : [ "obj-126", 0 ],
 					"source" : [ "obj-138", 0 ]
 				}
@@ -2299,13 +2273,6 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-137", 0 ],
-					"source" : [ "obj-144", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
 					"destination" : [ "obj-8", 0 ],
 					"source" : [ "obj-146", 0 ]
 				}
@@ -2348,7 +2315,7 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-137", 0 ],
+					"destination" : [ "obj-132", 0 ],
 					"source" : [ "obj-2", 1 ]
 				}
 

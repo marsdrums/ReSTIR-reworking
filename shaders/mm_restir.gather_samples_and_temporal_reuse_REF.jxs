@@ -664,7 +664,7 @@ void main(void) {
 
 		}
 
-		temporal_reservoir.z = reservoir.z + prev_reservoir.z;
+		//temporal_reservoir.z = reservoir.z + prev_reservoir.z;
 		
 		if(temporal_reservoir.y >= 0){
 			test_s = get_sample(int(temporal_reservoir.y));

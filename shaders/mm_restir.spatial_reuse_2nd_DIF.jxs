@@ -190,7 +190,7 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, dir));
 	//float PDF = 1 / M_TAU;
 	//return this_s.alb * lambert * test_s.col / PDF;	
-	return M_TAU * this_s.alb * lambert * test_s.col;										
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;										
 }
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
@@ -198,7 +198,7 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 	float lambert = max(0.0, dot(this_s.nor, test_s.nor));
 	//float PDF = 1 / (M_TAU);
 	//return this_s.alb * lambert * test_s.col / PDF;	
-	return M_TAU * this_s.alb * lambert * test_s.col;								
+	return /*M_TAU * */this_s.alb * lambert * test_s.col;								
 }
 
 vec4 updateReservoir(vec4 reservoir, float lightToSample, float weight, float c, uint seed, in vec3 candidate_dir, out vec3 best_dir)
@@ -265,7 +265,7 @@ void main(void) {
 				float tile_selector = mod(index + float(i), 64.0);
 				ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
 				vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
-				vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ, 0);
+				vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ*occ, 0);
 
 	   			disk = TBN * disk;
 	   			disk += this_s.pos;
@@ -324,25 +324,25 @@ void main(void) {
 
 	if(reservoir.y >= 0){
 
-		test_s = get_sample(int(reservoir.y));
+		//test_s = get_sample(int(reservoir.y));
 
 		//if(!shadowRay(this_s, test_s, seed)){
 		//	reservoir.w = 0.0;
 		//} else {
-			p_hat = luminance(get_radiance(this_s, test_s));
-			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			//p_hat = luminance(get_radiance(this_s, test_s));
+			//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		//}	
 
 		outBestWpos = vec4( (invV * vec4(test_s.pos, 1)).xyz, this_s.id);
 
 	} else {
-		test_s = get_environment_sample(best_dir);
+		//test_s = get_environment_sample(best_dir);
 
-		//if(!shadowRayForEnv(this_s, test_s, seed, textureMatrix0)){
+		//if(!shadowRayForEnv(this_s, test_s)){
 		//	reservoir.w = 0.0;
 		//} else {
-			p_hat = luminance(get_radiance_for_env(this_s, test_s));
-			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+			//p_hat = luminance(get_radiance_for_env(this_s, test_s));
+			//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		//}	
 
 		outBestWpos = vec4(best_dir, 1);
