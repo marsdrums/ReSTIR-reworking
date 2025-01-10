@@ -98,7 +98,7 @@ void main(void) {
 layout (location = 0) out vec4 outColor;
 
 uint get_rng_seed(){
-	return uint(jit_in.uv.x*3713) + uint(jit_in.uv.y*2882) + uint(frame*372);
+	return uint(jit_in.uvFull.x*3713) + uint(jit_in.uvFull.y*2882) + uint(frame*372);
 }
 
 int uv2index(in vec2 uv){
@@ -193,20 +193,20 @@ void main(void) {
 
 	uint seed = get_rng_seed();
 
-	float a = 1./(1. + this_s.nor.z);
-    float b = -this_s.nor.x*this_s.nor.y*a;
-    vec3 f = vec3(1. - this_s.nor.x*this_s.nor.x*a, b, -this_s.nor.x);
-   	vec3 r = vec3(b, 1. - this_s.nor.y*this_s.nor.y*a , -this_s.nor.y);
-
-   	mat3 TBN = mat3(r, f, this_s.nor);
+	float randAngle = RandomFloat01(seed)*M_TAU;
+	vec2 randomDir = vec2(cos(randAngle), sin(randAngle));
+	vec2 spiralDir[4] = vec2[] (randomDir,
+								randomDir.yx,
+								-randomDir,
+								-randomDir.yx);
 
 	sample test_s;
 
 	outColor = vec4(0,0,0,1);
 
 	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
-	float radius = mix(0., 30., occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
-	int NUM_SAMPLES = 4;
+	float radius = mix(1.4142135624, 30, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
+	int NUM_SAMPLES = 3;
 	float weight = 0.0001;
 
 	for(int i = NUM_SAMPLES; i > 0; i--){
@@ -214,16 +214,9 @@ void main(void) {
 		ivec2 randUV;
 		ivec2 randUVfull;
 
-		float rand_radius = sqrt(RandomFloat01(seed));///this_s.depth;
-		float rand_angle = RandomFloat01(seed)*M_TAU;//
-		vec3 disk = vec3(cos(rand_angle), sin(rand_angle), 0)*rand_radius*0.01*radius*occlusion;
-		disk = TBN * disk;
-		disk += this_s.pos;
-		vec4 proj_disk = projmat * vec4(disk, 1);
-		proj_disk.xy /= proj_disk.w;
-		vec2 proj_disk_uv = vec2(textureMatrix1 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
-		randUV = ivec2(proj_disk_uv);
-		randUVfull = ivec2(proj_disk_uv*2);
+		vec2 randUvSpiral = vec2(jit_in.uv + spiralDir[i]*float(i)*radius);
+		randUV = ivec2(randUvSpiral);
+		randUVfull = ivec2(randUvSpiral*2);
 
 		float sample_depth = texelFetch(norDepthTex, randUVfull).w; 
 		bool background = sample_depth == 0.0 || sample_depth == 1.0;

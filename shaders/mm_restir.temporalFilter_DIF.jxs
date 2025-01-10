@@ -8,7 +8,7 @@
 	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
 	<param name="pos" type="vec3" state="POSITION" />
 	<param name="uv" type="vec2" state="TEXCOORD" />
-	<param name="variance_clipping_gamma_DIF" type="float" default="3" />
+	<param name="variance_clipping_gamma_DIF" type="float" default="1.5" />
 	<language name="glsl" version="1.5">
 		<bind param="imgTex" program="fp" />
 		<bind param="velTex" program="fp" />
