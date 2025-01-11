@@ -158,7 +158,7 @@ sample get_sample_pos_col(int index){
 
 sample get_environment_sample(in vec3 candidate_dir, inout uint seed){
 	sample s;
-	s.col = textureLod(environmentMap, candidate_dir, 1).rgb;
+	s.col = textureLod(environmentMap, candidate_dir, 0).rgb;
 	s.nor = (V * vec4(candidate_dir, 0.0)).xyz;
 	//s.pos = s.nor;
 	return s;
@@ -205,8 +205,8 @@ void main(void) {
 	outColor = vec4(0,0,0,1);
 
 	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
-	float radius = mix(1.4142135624, 30, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
-	int NUM_SAMPLES = 3;
+	float radius = mix(1.4142135624, 5, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
+	int NUM_SAMPLES = 4;
 	float weight = 0.0001;
 
 	for(int i = NUM_SAMPLES; i > 0; i--){

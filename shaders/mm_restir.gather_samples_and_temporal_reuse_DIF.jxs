@@ -151,23 +151,33 @@ layout (location = 1) out vec4 outPhat;
 uniform int enable_temporal_DIF;
 
 uint get_rng_seed(){
-	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
+	return uint(jit_in.uv.x*37173) + uint(jit_in.uv.y*28842) + uint(frame*37711);
 }
 
-vec2 get_sample_uv(inout uint seed){
+vec2 get_sample_uv(inout uint seed, in int i){
 
-	return vec2(RandomFloat01(seed), RandomFloat01(seed))*texDim;
+	//stratified sampling
+	float d = 4;
+	vec2 offset = vec2( mod(float(i),d), floor(float(i)/d) );
+
+	vec2 randUV = vec2(RandomFloat01(seed), RandomFloat01(seed)) / d;
+	randUV += offset / d;
+	randUV *= texDim;
+	return randUV;
 }
 
-vec2 get_sample_uv_from_selected(inout uint seed){
+vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
 
-	return vec2(RandomFloat01(seed), RandomFloat01(seed))*vec2(30,18); //*** Hard coded tex dim, but it must change!
-}
-
-vec3 get_canidate_dir(inout uint seed, in vec3 nor){
+	//stratified sampling
+	float offset = float(i)/16;
 
 	//generate random unit vector 
-	vec3 rand_dir = randomUnitVector3(seed);
+	float z = RandomFloat01(seed) * 2.0f - 1.0f;
+    float a = (RandomFloat01(seed)/16 + offset) * TWOPI;
+    float r = sqrt(1.0f - z * z);
+    float x = r * cos(a);
+    float y = r * sin(a);
+    vec3 rand_dir = vec3(x, y, z);
 
 	//compute world space normal *** precompute it outside the loop!
 	vec3 wNor = (invV * vec4(nor, 0)).xyz;
@@ -305,8 +315,8 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-	int M = 4;//num of from the view port
-	int J = 4;//num of samples from the environment map
+	int M = 16;//num of from the view port
+	int J = 16;//num of samples from the environment map
 
 	int sample_index;
 	vec2 sample_uv;
@@ -315,7 +325,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	//initial selection of 1 sample of M
 	for (int i = M; i > 0; i--)
 	{
-		sample_uv = get_sample_uv(seed);
+		sample_uv = get_sample_uv(seed, i);
 	    sample_index = int(uv2index(sample_uv));
 	    sample test_s = get_sample_pos_col(sample_index);
 	    if(background(test_s)) continue;
@@ -328,7 +338,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	//sample the environment map
 	for (int k = J; k > 0; k--)
 	{
-		candidate_dir = get_canidate_dir(seed, this_s.nor);
+		candidate_dir = get_canidate_dir(seed, this_s.nor, k);
 	  	sample test_s = get_environment_sample(candidate_dir);
 
 		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
@@ -342,22 +352,17 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	if(reservoir.y >= 0){ //if it's a sample from the viewport
 
 		sample test_s = get_sample(int(reservoir.y));
-		p_hat = luminance( get_radiance(this_s, test_s) );
-		if(!shadowRay(this_s, test_s, seed)){
-			p_hat = 0.0;
-		}
+		p_hat = shadowRay(this_s, test_s, seed) ? luminance( get_radiance(this_s, test_s) ) : 0.0;
+		reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		return reservoir;
 
 	} else { //if it's a sample from the environment map
 
 		sample test_s = get_environment_sample(best_dir);
-		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
-		if(!shadowRayForEnv(this_s, test_s)){
-			p_hat = 0.0;
-		}
+		p_hat = shadowRayForEnv(this_s, test_s) ? luminance( get_radiance_for_env(this_s, test_s) ) : 0.0;
+		reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		return reservoir;
 	}
-
-	reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-	return reservoir;
 }
 
 
@@ -391,7 +396,7 @@ void main(void) {
 			vec3 dummy_dir;
 
 			// combine current reservoir
-				temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+			temporal_reservoir = updateReservoir(temporal_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
 			
 			// combine previous reservoir
 			if(prev_reservoir.y >= 0){

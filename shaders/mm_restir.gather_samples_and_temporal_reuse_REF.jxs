@@ -72,6 +72,7 @@
 		<include source="mm_restir.constants.glsl" program="fp" />
 		<include source="mm_restir.halton.glsl" program="fp" />
 		<include source="mm_restir.common.glsl" program="fp" />
+		<include source="mm_restir.raytrace.glsl" program="fp" />
 		<include source="mm_restir.BRDF.glsl" program="fp" />
 
 
@@ -176,7 +177,7 @@ sample get_sample(int index){
 	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
-	s.rou = max(0.01, lookup5.x);
+	s.rou = max(0.001, lookup5.x);
 	s.met = lookup5.y;
 	return s;
 }
@@ -573,6 +574,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	}
 
 	reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+	//reservoir.w = clamp(reservoir.w,0.001, 1.);
 	return reservoir;
 }
 
@@ -612,9 +614,10 @@ void main(void) {
 	vec2 hitPosUV;
 	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir, hitPosUV);
 
-	ivec2 reprojected_uv = ivec2( this_s.uv - this_s.vel*texDim );
+	//ivec2 reprojected_uv = ivec2( this_s.uv - this_s.vel*texDim );
+	ivec2 reprojected_uv = ivec2( this_s.uv );
 
-
+/*
 	//TEMPORAL REUSE//____________________________________________________________
 
 	float disocclusion = texelFetch(velTex, ivec2(jit_in.uv)).b;
@@ -645,7 +648,7 @@ void main(void) {
 				test_s = get_sample(int(prev_reservoir.y));
 				p_hat = 0;
 				
-				if(!background(test_s)){
+				if(!background(test_s) && !shadowRay(this_s, test_s, seed)){
 					vec3 dummy_dir;
 					p_hat = length( get_specular_radiance(this_s, test_s));
 					prev_reservoir.z =  min(4, prev_reservoir.z);
@@ -658,10 +661,11 @@ void main(void) {
 
 			vec3 prev_best_dir = texelFetch(prev_best_wposTex, reprojected_uv).yzw;
 			test_s = get_environment_sample(prev_best_dir, seed, this_s.rou);
-			p_hat = length( get_radiance_for_env(this_s, test_s) );
-			prev_reservoir.z = min(4, prev_reservoir.z);
-			temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
-
+			if(!shadowRayForEnv(this_s, test_s)){
+				p_hat = length( get_radiance_for_env(this_s, test_s) );
+				prev_reservoir.z = min(4, prev_reservoir.z);
+				temporal_reservoir = updateReservoir(temporal_reservoir, prev_reservoir.y, p_hat * prev_reservoir.w * prev_reservoir.z, prev_reservoir.z, seed, prev_best_dir, best_dir);	
+			}
 		}
 
 		//temporal_reservoir.z = reservoir.z + prev_reservoir.z;
@@ -682,7 +686,7 @@ void main(void) {
 
 	//___________________________________________________________________________________________________________________________________________________________
 
-
+*/
 	if(reservoir.y >= 0){ //if the sample is from the viewport
 
 		//test_s = get_sample(int(reservoir.y));

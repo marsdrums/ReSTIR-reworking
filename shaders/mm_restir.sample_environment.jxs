@@ -68,8 +68,9 @@ void main(void) {
 		float 	x2 = x*x;
 				x2 *= x2;
 				x *= x2;
-    	float F = x;
-		//float F = pow(1.0 - cosine, 5.0);
+		float F0 = 0.04;
+    	float F = F0 + (1 - F0)*x;
+    	//F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 		outColor = vec4(0,0,0,F);
 	} else {
 	  	outColor = background_enable == 1 ? vec4(textureLod(envTex, normalize(jit_in.rayDir), background_blur).rgb, 0.0) : vec4(0.0);

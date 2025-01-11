@@ -148,9 +148,13 @@
             <input subpass="ROUGHMETAL_half" />
         </subpass>
 
-        <subpass name="REF_resolve" file="mm_restir.resolve_REF.jxs" inputs="8" outputs="1" type="float16">
+        <subpass name="clamp_reservoir_REF2" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32">
+            <input subpass="REF_spatial" output="0"/>
+        </subpass>
+
+        <subpass name="REF_resolve" file="mm_restir.resolve_REF.jxs" inputs="8" outputs="2" type="float16">
             <input subpass="IMAGE" />
-            <input subpass="REF_spatial" output="0" />
+            <input subpass="clamp_reservoir_REF2" output="0" />
             <input subpass="REF_spatial" output="1" />
             <input source="NORMALS"/>
             <input subpass="VIEWPOS" />
@@ -159,9 +163,9 @@
             <input source="ROUGHMETAL" />
         </subpass>
 
-        <bind name="variance_clipping_gamma" param="variance_clipping_gamma" type="float" default="1.0" />
+        <bind name="variance_clipping_gamma" param="variance_clipping_gamma" type="float" default="2.0" />
         <subpass name="REF_filtered" file="mm_restir.temporalFilter_REF.jxs" inputs="4" outputs="1" type="float16">
-            <input subpass="REF_resolve" />
+            <input subpass="REF_resolve" output="0"/>
             <input subpass="VELOCITY_WEIGHT" />
             <input subpass="REF_filtered_fdbk" history="1" output="0"/>
             <input subpass="VELOCITY_ref_WEIGHT" />
@@ -240,7 +244,7 @@
             <input subpass="OCCLUSION" />
         </subpass>
 
-        <bind name="variance_clipping_gamma_DIF" param="variance_clipping_gamma_DIF" type="float" default="3.0" />
+        <bind name="variance_clipping_gamma_DIF" param="variance_clipping_gamma_DIF" type="float" default="1.5" />
         <subpass name="DIF_filtered" file="mm_restir.temporalFilter_DIF.jxs" inputs="4" outputs="1" type="float16">
             <input subpass="DIF_resolve" />
             <input subpass="VELOCITY_WEIGHT" />
@@ -278,7 +282,7 @@
         </subpass>     
 
         <subpass name="dummyOUT" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
-            <input subpass="DIF_filtered" output="0"/>
+            <input subpass="composite" output="0"/>
         </subpass>
 
 

@@ -260,6 +260,8 @@ void main(void) {
 	   		float index = float(frame)*float(num_samples);
 	   		float occ = texelFetch(occTex, ivec2(jit_in.uv)).r;
 
+	   		vec2 shiftBias = vec2(0,0);
+
 			for(int i = 0; i < num_samples; i++){
 
 				float tile_selector = mod(index + float(i), 64.0);
@@ -272,10 +274,14 @@ void main(void) {
 	   			vec4 proj_disk = projmat * vec4(disk, 1);
 	   			proj_disk.xy /= proj_disk.w;
 	   			vec2 proj_disk_uv = vec2(textureMatrix0 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
-				ivec2 neiUV = ivec2(proj_disk_uv);//ivec2(floor(get_sample_uv(seed, radius, i)) + 0.5);//this_s.uv + offset;
-				
+				ivec2 neiUV = ivec2(proj_disk_uv + shiftBias);
+
+								
 				if(	neiUV.x < 0 || neiUV.y < 0 || 
-					neiUV.x > texDim.x-1 || neiUV.y > texDim.y-1) continue;
+					neiUV.x >= texDim.x || neiUV.y >= texDim.y){
+					shiftBias -= vec2(neiUV) - jit_in.uv;
+					continue;
+				} 
 
 				vec4 candidateNorDepth = texelFetch(norDepthTex, neiUV);
 
@@ -284,7 +290,11 @@ void main(void) {
 				vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
 
 				if(	dot(this_s.nor, candidateNorDepth.xyz) < 0.95 
-					 ||  length(this_s.pos - candidatePos) > 0.3 ) continue;
+					 ||  length(this_s.pos - candidatePos) > 0.3 ){
+					shiftBias -= vec2(neiUV) - jit_in.uv;
+					continue;
+				}
+
 
 
 				neighbor_reservoir = texelFetch(reservoirTex, neiUV);

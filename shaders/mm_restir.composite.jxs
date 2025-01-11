@@ -76,9 +76,9 @@ void main(void) {
 	outFdbk.a = 1.0;
 	outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
 
-	vec3 	kS = vec3(F);					//k specular
-	vec3 	kD = vec3(1.0) - kS;	//k diffuse
-			kD *= 1.0 - rouMet.y;		//nullify k diffuse if metallic
+	vec3 	kS = vec3(F);			//k specular
+	vec3 	kD = vec3(1);//vec3(1.0) - kS;	//k diffuse
+			kD *= 1.0 - rouMet.y;	//nullify k diffuse if metallic
 
 
 	//res *= 1 - rouMet.y;
@@ -95,6 +95,7 @@ void main(void) {
 	res += bkg; //add background environment
 
 	outColor = vec4(res, 1.0);
+	//outColor = vec4(img + ind*alb + spe*mix(vec3(1.0), alb, rouMet.y) + bkg, 1.0);
 	//outFdbk = outColor;
 	//outColor = vec4(ind, 1.0);
 }
