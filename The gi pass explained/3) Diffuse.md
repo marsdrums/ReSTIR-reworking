@@ -154,7 +154,7 @@ Prior to merging, the samples in the previous-frame reservoirs are re-weighted t
 >[!NOTE]
 > During temporal reuse, the length of the reservoir (reservoir.z) gets clamped to 20, as suggested by the original ReSTIR paper. This avoids having too-long reservoirs, which may become "stagnant", and react slower to the changes in the scene.
 
-After merging, the reservoirs are validated. A "shadow ray" is shot from the shaded point toward the sample held by the reservoir to confirm/disprove that the sample is still visible. Shadow rays are traced in screen-space usign a large marching step.
+Prior to merging, the reservoirs are validated. A "shadow ray" is shot from the shaded point toward the sample held by the reservoir to confirm/disprove that the sample is still visible. Shadow rays are traced in screen-space usign a large marching step.
 
 >[!NOTE]
 > There's no reason to use fine-stepped ray marching, since we're not interested in what the ray intersects and where, but just if there's something between the shaded pixel and the sample.
@@ -208,17 +208,12 @@ Neighboring reservoirs are excluded from merging with the current reservoir if t
 if(dot(this_s.nor, candidateNorDepth.xyz) < 0.95 || length(this_s.pos - candidatePos) > 0.3) continue;
 ```
 
-The disk's search radius is influenced by the occlusion map—highly occluded fragments use a smaller radius compared to unoccluded ones.
+The disk's search radius is influenced by the occlusion map — highly occluded fragments use a smaller radius compared to unoccluded ones.
 
 >[!NOTE]
 > In occluded regions, such as concave corners, high sample variance occurs, making it unnecessary to access distant reservoirs that are likely to be rejected due to incompatible surface normals.
 
 The first spatial reuse accesses 8 neighboring reservoirs.
-
-By the end of the process, the reservoir is validated, tracing a shadow ray towards the sample to check if something is in the way.
-
->[!WARNING]
-> I'm using more reservoir validations than probably needed; at the moment, i'm trying to put everything in, and then see where we can cut some corners
 
 ## Second spatial reuse of the reservoirs (half-res)
 
@@ -235,19 +230,24 @@ The output of this pass is sent to the resolve pass and fed back for temporal re
 Finally, we should have some reservoirs holding the best possible samples.
 The resolve pass transforms these samples into actual colors, which are rendered on screen. This step is performed at full resolution.
 
-For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) uses four reservoirs to determine the color of each pixel. A normal-oriented disk is drawn again, randomly accessing four reservoirs, including the current one. The search radius is once again influenced by the occlusion map and the reservoirs are chosen following a spatio-temporal blue noise distribution. Unlike the spatial reuse pass, neighboring reservoirs with differing normals, positions andare not outright rejected. Instead, a weight is assigned to each sample based on orientation, positional differences and ambient occlusion similarities. Before averaging colors, each contribution is scaled by its respective weight.
+For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) uses four reservoirs to determine the color of each pixel. The sampling kernel employed is a compact spiral pattern that begins at the central pixel and gradually expands outward in a rotating motion. Each kernel is randomly rotated, and the spiral's radius is adjusted based on the occlusion value.
+
+>[!NOTE]
+> In the released "gi" pass, diffuse reservoirs are resolved used a normal oriented disk. The spiral kernel seems to produce more even results, and allows smaller radii in general, which helps increasing precision.
+
+ Unlike the spatial reuse pass, neighboring reservoirs with differing normals, positions are not outright rejected. Instead, a weight is assigned to each sample based on orientation, positional differences and ambient occlusion similarities. Before averaging colors, each contribution is scaled by its respective weight.
 
 ![](./images/weighting.png)
 
 The picture shows the difference without and with weighting.
 
-The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is added back at compositing stage.
+The indirect diffuse component is divided by the albedo value of each fragment to de-modulate colors from albedo. This facilitates subsequent filtering operations. Albedo is modulated back at compositing stage.
 
 ## Temporal filtering (full-res)
 
 ![](./images/DIF5.png)
 
-The render colors are filtered using a temporal filter (restir.temporalFilter_DIF.jxs). Colors are accumulated over frames, reprojecting the fragments' positions using velocity vectors. To avoid ghosting artifacts, history colors are rectified by clipping their colors within the minimum and maximum values of the neighboring pixels. Local statistics (mean variance and squared variance) are used to determine the size of the "clipping box". The param "variance_clipping_gamma" makes the clipping more or less severe.
+The rendered colors are filtered using a temporal filter (restir.temporalFilter_DIF.jxs). Colors are accumulated over frames, reprojecting the fragments' positions using velocity vectors. To avoid ghosting artifacts, history colors are rectified by clipping their colors within the minimum and maximum values of the neighboring pixels. Local statistics (mean variance and squared variance) are used to determine the size of the "clipping box". The param "variance_clipping_gamma" makes the clipping more or less severe.
 
 ```glsl
 //COLOR CLIPPING
@@ -276,6 +276,3 @@ outCol.rgb = mix( p.col, c.col, c.weight );
 ```
 
 After temporal filtering, the diffuse component is ready to be composited with the specular component.
-
->[!WARNING]
-> I'd like ReSTIR to inform temporal filtering - since i'm validating previous frames reservoirs through ray tracing operations, history colors could be discarded a priori without the need to rectify them.

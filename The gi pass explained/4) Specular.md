@@ -6,7 +6,6 @@ Reflections are computed similarly to indirect diffuse, but special attention is
 
 Reflections computation includes the following steps:
 - Sample gathering (half-res)
-- Temporal reuse of the reservoirs (half-res)
 - Spatial reuse of the reservoirs (half-res)
 - ReSTIR resolve (full-res)
 - Temporal filtering (full-res)
@@ -81,16 +80,10 @@ vec3 get_specular_radiance(in sample this_s, in sample test_s){
 
 After weighting, the sample is inserted into a reservoir.
 
-## Temporal reuse of the reservoirs (half-res)
-
-As with the diffuse component, the reservoirs from the previous frame are merged with those from the current frame. If temporal reprojection is valid, the candidate from the history reservoir is re-weighted in the current frame, and the reservoirs are combined.
-
-For reflections, the reservoir length is limited to 4, resulting in a relatively short reservoir. While this shorter length offers less temporal stability, it allows the reflection computation to respond more quickly to sudden changes in the scene.
+No temporal reuse is employed.
 
 >[!NOTE]
-> Reflections are strictly view-dependent, therefore any minor change in the camera's position or direction can invalidate the samples. For this reason, i'm not relying on long reservoirs. Still, there's some tangible gain in convergence also with short reservoirs.
-
-Reservoirs are fed back into the temporal reuse pass. Differently from the indirect diffuse component computations, the feedback point isn't after the spatial reuse, but before it.
+> It would be cool to exploit temporal reuse of the reservoirs, but unfortunately it's not that easy. In the original formulation of the ReSTIR algorithm, raytracing in performed in world space. 
 
 ## Spatial reuse of the reservoirs (half-res)
 (shader: restir.spatial_reuse_ref.jxs)
