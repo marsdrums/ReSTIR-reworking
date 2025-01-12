@@ -83,12 +83,12 @@ After weighting, the sample is inserted into a reservoir.
 No temporal reuse is employed.
 
 >[!WARNING]
-> It would be cool to exploit temporal reuse of the reservoirs, but unfortunately it's not that easy. The difficulty lies in the impossibility to construct relilable velocity vectors to back-project reflections (more on that in the final section). In the original formulation of the ReSTIR algorithm, raytracing in performed in world space, tracing through a BVH and storing the position of the intestected triangle as index in the reservoir. If the triangle moves from one frame to the next, is very easy to query the new position of the point on the triangle, and estimate where the hit point was reflected at the previous frame. Being in screen space, we're not as fortunate. For this reason, no temporal reuse of the reservoirs is employed. 
+> It would be cool to exploit temporal reuse of the reservoirs, but unfortunately it's not that easy. The difficulty lies in the impossibility to construct relilable velocity vectors to back-project reflections (more on that in the final section). In the original formulation of the ReSTIR algorithm, raytracing in performed in world space, tracing through a BVH and storing the position of the intestected triangle as index in the reservoir. If the triangle moves from one frame to the next, it's very easy to query the new position of the point on the triangle, and estimate where the hit point was reflected at the previous frame. Being in screen space, we're not as luky. For this reason, no temporal reuse of the reservoirs is employed. 
 
 ## Spatial reuse of the reservoirs (half-res)
 (shader: restir.spatial_reuse_ref.jxs)
 
-The reservoirs are combined spatially. In this pass, samples are not drawn within a normal-oriented disk but instead are sampled using a spiral kernel. The spiral radius is affected by the distance of the hit point from the reflected sample, and by the material's roughness. 
+The reservoirs are combined spatially. In this pass, samples are not drawn within a normal-oriented disk but instead are sampled using a spiral kernel. The spiral radius is affected by the distance of the sample from the shaded pixel, and by the material's roughness. 
 
 >[!NOTE]
 > I initially projected on screen the specular lobe, and gathered the neighboring reservoirs from within it. The spiral kernel seems to do a better job, gathering more contributing reservoirs on average.
@@ -101,14 +101,14 @@ The rejection criteria are the same as the diffuse spatial reuse pass (normals e
 The resolution pass is very similar to the one used for the diffuse component. The differences are:
 - The resolve pass for reflections uses 8 samples instead of 4.
 - Occlusion is no longer taken into account.
-- The radius for looking up samples into neighboring reservoirs is affected by roughness.
+- The radius for looking up samples into neighboring reservoirs is affected by roughness and pixel-sample distance.
 
 >[!WARNING]
-> Currently i'm always reading samples from 8 reservoirs. The number of averaged samples could be made proportional to material's roughness, with high-roughness materials needing more samples to average, and low-roughness material just a few or one.
+> Currently i'm always reading samples from 8 reservoirs. The number of averaged samples could be made proportional to spiral radius, with high-roughness materials needing more samples to average, and low-roughness material just a few or one.
 
-The spiral kernel's radius is no longer affected by occlusion, but rather by the distance between the shaded pixel and the hit point.
+The spiral kernel's radius is no longer affected by occlusion, but rather by roughness and the distance between the shaded pixel and the hit point.
 
-Like with diffuse, the resulting color isn't modulated by albedo to optimize the next filterning stage. 
+Like with diffuse, the resulting color isn't modulated by albedo to optimize the next filtering stage. 
 
 ## Temporal filtering (full-res)
 
