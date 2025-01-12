@@ -120,7 +120,7 @@ https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf
 >[!WARNING]
 > The framework in which this method is applied is quite different from ours. I tried adapring the method to work in our context with mixed results. I'll go more into the details of what's not working in the final section.
 
-In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending colors according to local staistics (mean, and squared variance). This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer.
+In the temporal filter, i'm sampling color history using both sets of velocity vectors, and i'm blending colors according to local statistics (mean, and squared variance). This method is called "Dual-source reprojection", and has been used both in the "Pica Pica" game, and in the Kajiya renderer. See this video for an explanation of how dual-source reprojection has been implemented in Pica Pica: https://www.youtube.com/watch?v=YwV4GOBdFXo&ab_channel=SEED%E2%80%93ElectronicArts (min 19:39)
 
 >[!WARNING]
 > Once again, i'm getting mixed results with this kind of temporal reprojection. While it effectively improves temporal coherence for very smooth materials and very rough materials, it's unclear how to balance it with medium-roughness materials.
