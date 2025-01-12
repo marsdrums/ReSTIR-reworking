@@ -227,6 +227,8 @@ The output of this pass is sent to the resolve pass and fed back for temporal re
 
 ## ReSTIR resolve (full-res)
 
+![](./images/DIF5.png)
+
 Finally, we should have some reservoirs holding the best possible samples.
 The resolve pass transforms these samples into actual colors, which are rendered on screen. This step is performed at full resolution.
 
@@ -245,7 +247,7 @@ The indirect diffuse component is divided by the albedo value of each fragment t
 
 ## Temporal filtering (full-res)
 
-![](./images/DIF5.png)
+![](./images/DIF6.png)
 
 The rendered colors are filtered using a temporal filter (restir.temporalFilter_DIF.jxs). Colors are accumulated over frames, reprojecting the fragments' positions using velocity vectors. To avoid ghosting artifacts, history colors are rectified by clipping their colors within the minimum and maximum values of the neighboring pixels. Local statistics (mean variance and squared variance) are used to determine the size of the "clipping box". The param "variance_clipping_gamma" makes the clipping more or less severe.
 
