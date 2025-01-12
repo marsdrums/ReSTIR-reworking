@@ -279,7 +279,7 @@ After temporal filtering, the diffuse component is ready to be composited with t
 
 ## Old vs. New comparison
 
-In general, the diffuse component compotation has been extensively reworked since the released version of the "gi" pass. This is a side-to-side comparison of the old diffuse vs the new diffuse:
+In general, the diffuse component computation has been extensively reworked since the released version of the "gi" pass. This is a side-to-side comparison of old diffuse vs new diffuse:
 
 ![](./images/old_vs_new_diffuse.png)
 
