@@ -282,7 +282,7 @@
         </subpass>     
 
         <subpass name="dummyOUT" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
-            <input subpass="DIF_filtered" output="0"/>
+            <input subpass="composite" output="0"/>
         </subpass>
 
 

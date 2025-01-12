@@ -69,14 +69,14 @@ void main(void) {
 	float F = lookup.a;
 
 	vec3 res = img;
-	res += alb*occ*0.01; //add a touch of uniform ambient light
+	res += alb*occ*0.005; //add a touch of uniform ambient light
 	ind *= alb; //modulate indirect by albedo
 	res += ind; //add indirect
 
-	outFdbk.a = 1.0;
-	outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
+	//outFdbk.a = 1.0;
+	//outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
 
-	vec3 	kS = vec3(F);			//k specular
+	//vec3 	kS = vec3(F);			//k specular
 	vec3 	kD = vec3(1);//vec3(1.0) - kS;	//k diffuse
 			kD *= 1.0 - rouMet.y;	//nullify k diffuse if metallic
 
@@ -91,6 +91,10 @@ void main(void) {
 
 	res *= kD;
 	res += spe;
+
+	//uncorrect, but it looks better!
+	outFdbk.a = 1.0;
+	outFdbk.rgb = res;//mix(res, spe*0.3, rouMet.y);
 
 	res += bkg; //add background environment
 
