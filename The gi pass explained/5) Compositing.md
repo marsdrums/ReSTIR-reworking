@@ -37,7 +37,7 @@ The compositing stage is pretty straightforward. (shader restir.composite.jxs)
 ```
 
 >[!NOTE]
-> I'm adding a small amount of uniform ambient light, obscured by the occlusion map. The ambient light is so weak that is unnoticeble; still, when the image is completely dark (no direct illumination reaches the objects in the scene), it's enough to make the ReSTIR algorithm work.
+> I'm adding a small amount of uniform ambient light, obscured by the occlusion map. The ambient light is so weak that it's unnoticeble; still, when the image is completely dark (no direct illumination reaches the objects in the scene), it's enough to make the ReSTIR algorithm work.
 
 ![](./images/ambient.png)
 Ambient light only
