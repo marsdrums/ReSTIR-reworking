@@ -14,6 +14,26 @@
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
+					"filename" : "taa.jxp",
+					"id" : "obj-159",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "jit_gl_texture", "", "" ],
+					"patching_rect" : [ 146.0, 430.0, 196.0, 22.0 ],
+					"text" : "jit.gl.pass @fxname taa @quality hi",
+					"textfile" : 					{
+						"filename" : "taa.jxp",
+						"flags" : 0,
+						"embed" : 0,
+						"autowatch" : 1
+					}
+
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-162",
 					"maxclass" : "newobj",
 					"numinlets" : 1,
@@ -263,7 +283,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 0,
 					"patching_rect" : [ 413.0, -96.0, 232.0, 73.0 ],
-					"text" : "Random reservoir permutatino has been disabled!!"
+					"text" : "Use the occlusion map to guide the temporal filter's strength"
 				}
 
 			}
@@ -327,7 +347,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "jit_gl_texture", "", "" ],
-					"patching_rect" : [ 144.600003659725189, 426.0, 437.0, 22.0 ],
+					"patching_rect" : [ 143.0, 462.0, 437.0, 22.0 ],
 					"text" : "jit.gl.pass @fxname gamma @color_levels 167000 @tonemapping 0 @quality hi",
 					"textfile" : 					{
 						"filename" : "gamma.jxp",
@@ -513,7 +533,7 @@
 			}
 , 			{
 				"box" : 				{
-					"attr" : "radius_2",
+					"attr" : "radius_3",
 					"id" : "obj-64",
 					"maxclass" : "attrui",
 					"numinlets" : 1,
@@ -641,8 +661,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 749.0, 11.0, 76.0, 22.0 ],
-					"text" : "jit.* @val 0.1"
+					"patching_rect" : [ 859.0, -60.0, 76.0, 22.0 ],
+					"text" : "jit.* @val 10."
 				}
 
 			}
@@ -2457,6 +2477,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-159", 0 ],
+					"source" : [ "obj-144", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-8", 0 ],
 					"source" : [ "obj-146", 0 ]
 				}
@@ -2559,6 +2586,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-132", 0 ],
+					"source" : [ "obj-159", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-17", 0 ],
 					"source" : [ "obj-16", 0 ]
 				}
@@ -2594,7 +2628,7 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-132", 0 ],
+					"destination" : [ "obj-159", 0 ],
 					"source" : [ "obj-2", 1 ]
 				}
 

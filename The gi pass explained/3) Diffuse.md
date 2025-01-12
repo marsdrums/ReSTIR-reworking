@@ -276,3 +276,11 @@ outCol.rgb = mix( p.col, c.col, c.weight );
 ```
 
 After temporal filtering, the diffuse component is ready to be composited with the specular component.
+
+## Old vs. New comparison
+
+In general, the diffuse component compotation has been extensively reworked since the released version of the "gi" pass. This is a side-to-side comparison of the old diffuse vs the new diffuse:
+
+![](./images/old_vs_new_diffuse.png)
+
+The ReSTIR math has been revisited, as well as the sampling and reservoir reuse strategies, allowing for faster convergence and lighter temporal filtering.
