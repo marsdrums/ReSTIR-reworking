@@ -283,4 +283,6 @@ In general, the diffuse component computation has been extensively reworked sinc
 
 ![](./images/old_vs_new_diffuse.png)
 
+(the environment map used in the two shots is the same)
+
 The ReSTIR math has been revisited, as well as the sampling and reservoir reuse strategies, allowing for faster convergence and lighter temporal filtering.
