@@ -221,7 +221,7 @@ The first spatial reuse accesses 8 neighboring reservoirs.
 
 After the first spatial reuse, a second follows. The mechanics are exactly the same, but this reuse pass uses 5 neighboring reservoirs only and a smaller search radius (restir.spatial_reuse_2nd_DIF.jxs).
 
-After this second spatial reuse of the reservoirs, wight clamping is applied again to enruse no super bright samples produces fireflies.
+After this second spatial reuse of the reservoirs, weight clamping is applied again to ensure no super bright sample produces fireflies.
 
 The output of this pass is sent to the resolve pass and fed back for temporal reuse at the next frame.
 
