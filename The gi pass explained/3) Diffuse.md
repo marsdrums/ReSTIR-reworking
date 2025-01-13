@@ -237,7 +237,7 @@ For the indirect diffuse component, the resolve pass (restir.resolve_DIF.jxs) us
 >[!NOTE]
 > In the released "gi" pass, diffuse reservoirs are resolved used a normal oriented disk. The spiral kernel seems to produce more even results, and allows smaller radii in general, which helps increasing precision.
 
- Unlike the spatial reuse pass, neighboring reservoirs with differing normals, positions are not outright rejected. Instead, a weight is assigned to each sample based on orientation, positional differences and ambient occlusion similarities. Before averaging colors, each contribution is scaled by its respective weight.
+ Unlike the spatial reuse pass, neighboring reservoirs with differing normals, positions and occlusion values are not outright rejected. Instead, a weight is assigned to each sample based on orientation, positional differences and ambient occlusion similarities. Before averaging colors, each contribution is scaled by its respective weight.
 
 ![](./images/weighting.png)
 
