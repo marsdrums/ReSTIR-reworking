@@ -83,7 +83,7 @@ After weighting, the sample is inserted into a reservoir.
 No temporal reuse is employed.
 
 >[!WARNING]
-> It would be cool to exploit temporal reuse of the reservoirs, but unfortunately it's not that easy. The difficulty lies in the impossibility to construct relilable velocity vectors to back-project reflections (more on that in the final section). In the original formulation of the ReSTIR algorithm, raytracing in performed in world space, tracing through a BVH and storing the position of the intestected triangle as index in the reservoir. If the triangle moves from one frame to the next, it's very easy to query the new position of the point on the triangle, and estimate where the hit point was reflected at the previous frame. Being in screen space, we're not as luky. For this reason, no temporal reuse of the reservoirs is employed. 
+> It would be cool to exploit temporal reuse of the reservoirs, but unfortunately it's not that easy. The difficulty lies in the impossibility to construct relilable velocity vectors to back-project reflections (more on that in the final section). In the original formulation of the ReSTIR algorithm, raytracing in performed in world space, tracing through a BVH and storing the position of the intestected triangle as index in the reservoir. If the triangle moves from one frame to the next, it's very easy to query the new position of the hit point on the triangle, and estimate where it was reflected at the previous frame. Being in screen space, we're not that lucky. For this reason, no temporal reuse of the reservoirs is employed. 
 
 ## Spatial reuse of the reservoirs (half-res)
 (shader: restir.spatial_reuse_ref.jxs)
@@ -114,7 +114,7 @@ Like with diffuse, the resulting color isn't modulated by albedo to optimize the
 
 Temporal filtering is applied following the same exact algorithm as the diffuse component. The only difference regards velocity vectors. 
 
-Velocity vectors are very useful to reproject the diffuse component, but less than ideal for temporally reproject reflections. To the temporal filtering pass i'm providing two distinc sets of velocity vectors - one coming from the render target, and one specifically crafted for reprojecting reflections. The method i've followed to implement reliable velocity vector for reflections is this:
+Velocity vectors are very useful to reproject the diffuse component, but less than ideal for temporally reproject reflections. I'm providing two distinc sets of velocity vectors to the temporal filtering pass - one coming from the render target, and one specifically crafted for reprojecting reflections. The method i've followed to implement reliable velocity vector for reflections is this:
 https://sites.cs.ucsb.edu/~lingqi/publications/rtg2_ch25.pdf
 
 >[!WARNING]
