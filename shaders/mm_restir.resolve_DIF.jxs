@@ -209,12 +209,12 @@ void main(void) {
 	int NUM_SAMPLES = 4;
 	float weight = 0.0001;
 
-	for(int i = NUM_SAMPLES; i > 0; i--){
+	for(int i = 0; i < NUM_SAMPLES; i++){
 
 		ivec2 randUV;
 		ivec2 randUVfull;
 
-		vec2 randUvSpiral = vec2(jit_in.uv + spiralDir[i]*float(i)*radius);
+		vec2 randUvSpiral = vec2(jit_in.uv + spiralDir[i%4]*float(i)*radius);
 		randUV = ivec2(randUvSpiral);
 		randUVfull = ivec2(randUvSpiral*2);
 
@@ -262,7 +262,7 @@ void main(void) {
 			weight += this_weight;
 		}
 	}
-
+/*
 	vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
 
 	if(reservoir.y >= 0){ //if the sample is from the viewport
@@ -292,7 +292,7 @@ void main(void) {
 			weight += 1;
 		}
 	}
-
+*/
 	outColor.rgb /= weight;
 	outColor.rgb /= this_s.alb;
 

@@ -81,14 +81,14 @@ The weighting function (here called luminance) computes weighting as:
 float luminance(vec3 x){ return length(x); }
 ```
 
-After weighting, the sample is inserted into the reservoir. Reservoirs contain 4 elements, and are stored as 4-component vectors. Mirroring the original ReSTIR paper, the elements in the reservoir vectors are the following:
+After weighting, the sample is inserted into the reservoir. Reservoirs are stored as 4-component vectors. Mirroring the original ReSTIR paper, the elements in the reservoir vectors are the following:
 
 - reservoir.x = sum of the weights; the weight of each sample is added to the total weight of the reservoir.
 - reservoir.y = index of the selected sample; 
 - reservoir.z = number of samples processed by the reservoir so far.
 - reservoir.w = weight of the selected sample; 
 
-Each sample must be identified by a single value to keep reservoirs packed into a vec4 for convenience. To make this happen, i'm using two utility funtions to transform texture coordinates into indexes and back:
+Each sample must be identified by a single value to keep reservoirs packed into a vec4. To make this happen, i'm using two utility funtions to transform texture coordinates into indexes and back:
 
 ```glsl
 int uv2index(in vec2 uv){
@@ -148,7 +148,7 @@ In case the sample comes from the viewport, the index of the sample is >= 0; if 
 
 ![](./images/DIF2.png)
 
-After the samples have been collected, the resevoirs from the previous frame are merged with the current reservoirs. A relative motion between the camera and the objects in the scene may have occured from one frame to the next, so reservoirs are temporally reprojected using velocity vectors. If reprojection fails (whether because the fragment was outside the viewport at the previous frame, or because it has just been disoccluded), the reservoir merging is skipped.
+After samples have been collected, the resevoirs from the previous frame are merged with the current reservoirs. A relative motion between the camera and the objects in the scene may have occured from one frame to the next, so reservoirs are temporally reprojected using velocity vectors. If reprojection fails (whether because the fragment was outside the viewport at the previous frame, or because it has just been disoccluded), the reservoir merging is skipped.
 Prior to merging, the samples in the previous-frame reservoirs are re-weighted to update their "importance".
 
 >[!NOTE]
@@ -195,7 +195,7 @@ The next step is to combine reservoirs spatially. From the processed reservoir, 
 
 ![](./images/spatial_reuse.png)
 
-No reservoir validation is performed on the individual merged reservoir, on the assumption that fragments visible from the current position are likely visible from neighboring positions as well. Neighboring reservoirs are sampled within a normal-oriented disk, as fragments with similar orientations (normals) to the current fragment are more likely to contain valuable samples. This approach increases the likelihood of finding important contributions. Prior to merging, samples are re-weighted, like we did with temporal reused reservoirs.
+No reservoir validation is performed on the individual merged reservoir, on the assumption that fragments visible from the current position are likely visible from neighboring positions as well. Neighboring reservoirs are sampled within a normal-oriented disk, as fragments with similar orientations (normals) are more likely to contain valuable samples. This approach increases the likelihood of finding important contributions. Prior to merging, samples are re-weighted, like we did with temporal reused reservoirs.
 
 >[!WARNING]
 > The weighting function is length(radiance). While this is ideal, length() functions are slow because they involve a square root computation. In some ReSTIR implementations i saw, the weight computation is performed using luminance(radiance). It may be worth trying substitute the weighting function with a lighter luminance computation, especially in spatial reuse, where many weights must be computed.
@@ -212,6 +212,8 @@ The disk's search radius is influenced by the occlusion map — highly occluded 
 
 >[!NOTE]
 > In occluded regions, such as concave corners, high sample variance occurs, making it unnecessary to access distant reservoirs that are likely to be rejected due to incompatible surface normals.
+
+If a pixel is very close to the edges of the viewport, roughtly half of the texture lookups would fail, leaving them with fewer reservoirs to merge. To make the best out of the limited number of texure lookups, a variable called "shiftBias" is used to "force" the sampling kernel inside the texture.
 
 The first spatial reuse accesses 8 neighboring reservoirs.
 

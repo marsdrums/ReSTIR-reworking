@@ -614,8 +614,7 @@ void main(void) {
 	vec2 hitPosUV;
 	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir, hitPosUV);
 
-	//ivec2 reprojected_uv = ivec2( this_s.uv - this_s.vel*texDim );
-	ivec2 reprojected_uv = ivec2( this_s.uv );
+	ivec2 reprojected_uv = ivec2( this_s.uv - this_s.vel*texDim );
 
 /*
 	//TEMPORAL REUSE//____________________________________________________________
@@ -685,8 +684,8 @@ void main(void) {
 	}
 
 	//___________________________________________________________________________________________________________________________________________________________
-
 */
+
 	if(reservoir.y >= 0){ //if the sample is from the viewport
 
 		//test_s = get_sample(int(reservoir.y));
