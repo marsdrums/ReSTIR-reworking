@@ -20,7 +20,7 @@ Samples are gathered differently than the diffuse pass - instead of picking rand
 
 ### The PDF for reflections
 
-To determine the ray direction for reflections, I refer to microfacet theory. Here’s a quick recap:
+To determine the ray direction for reflections, i refer to microfacet theory. Here’s a quick recap:
 
 From the perspective of microfacet theory, a pixel cannot be represented by a single surface orientation. Instead, it represents a "patch" of microscopic surfaces, each with its own unique orientation. The variation in these facet orientations is governed by a roughness parameter, which controls the divergence of their normals. Since individual facet normals cannot be computed analytically, they are represented statistically.
 
