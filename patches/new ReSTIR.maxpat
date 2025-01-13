@@ -14,6 +14,19 @@
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
+					"attr" : "position",
+					"id" : "obj-161",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ -96.0, -47.0, 280.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"filename" : "taa.jxp",
 					"id" : "obj-159",
 					"maxclass" : "newobj",
@@ -39,7 +52,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 478.0, 1401.0, 58.0, 22.0 ],
+					"patching_rect" : [ 258.0, 1430.0, 58.0, 22.0 ],
 					"text" : "loadbang"
 				}
 
@@ -52,7 +65,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 467.0, 1453.0, 24.0, 24.0 ]
+					"patching_rect" : [ 258.0, 1465.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -63,8 +76,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_gl_texture", "" ],
-					"patching_rect" : [ 467.0, 1531.0, 70.0, 22.0 ],
-					"text" : "jit.gl.texture"
+					"patching_rect" : [ 258.0, 1503.0, 325.0, 22.0 ],
+					"text" : "jit.gl.texture @rectangle 0 @mipmap trilinear @wrap repeat"
 				}
 
 			}
@@ -282,7 +295,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 413.0, -96.0, 232.0, 73.0 ],
+					"patching_rect" : [ 413.0, -96.0, 238.0, 73.0 ],
 					"text" : "Use the occlusion map to guide the temporal filter's strength"
 				}
 
@@ -1639,7 +1652,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "jit_gl_texture", "", "" ],
-					"patching_rect" : [ 112.300001263618469, 323.200004816055298, 227.0, 22.0 ],
+					"patching_rect" : [ 112.300001263618469, 328.0, 227.0, 22.0 ],
 					"text" : "jit.gl.pass @file mm_restir.jxp @quality hi",
 					"textfile" : 					{
 						"filename" : "mm_restir.jxp",
@@ -1850,7 +1863,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_geometry", "" ],
-					"patching_rect" : [ 25.0, 751.0, 174.0, 22.0 ],
+					"patching_rect" : [ 92.0, 751.0, 174.0, 22.0 ],
 					"text" : "jit.geom.smooth @iterations 50"
 				}
 
@@ -1874,8 +1887,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_geometry", "" ],
-					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 157.0, 22.0 ],
-					"text" : "jit.geom.xform @scale 5 1 5"
+					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 171.0, 22.0 ],
+					"text" : "jit.geom.xform @scale 30 1 30"
 				}
 
 			}
@@ -2607,6 +2620,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-11", 0 ],
+					"source" : [ "obj-161", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-160", 0 ],
 					"source" : [ "obj-162", 0 ]
 				}
@@ -2894,7 +2914,7 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-7", 0 ],
+					"destination" : [ "obj-148", 0 ],
 					"source" : [ "obj-6", 0 ]
 				}
 
@@ -2959,13 +2979,6 @@
 				"patchline" : 				{
 					"destination" : [ "obj-35", 0 ],
 					"source" : [ "obj-69", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-148", 0 ],
-					"source" : [ "obj-7", 0 ]
 				}
 
 			}

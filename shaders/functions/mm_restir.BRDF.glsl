@@ -81,8 +81,8 @@ vec4 generate_ray_from_GGX_VNDF(in sample this_s){
 
     //read the current sample in the Halton sequence
     int i = (frame + randomOffset) % 64; //*** move to vertex stage
-    vec2 Xi = vec2( fract(halton[i].x+RandomFloat01(seed)),
-                    fract(halton[i].y+RandomFloat01(seed)));
+    //vec2 Xi = vec2( fract(halton[i].x+RandomFloat01(seed)), fract(halton[i].y+RandomFloat01(seed)));
+    vec2 Xi = halton[i];
 
     //Othronormal basis
     vec3 f, r;
@@ -131,6 +131,73 @@ vec3 ggx_vndf_estimator(in sample this_s, float NdotL, float NdotV, float VdotH)
     return estimator;
 }
 
+vec3 SphericalCapBoundedWithPDFRatio(vec2 u, vec3 wi, vec2 alpha, out float pdf_ratio)
+{
+    // warp to the hemisphere configuration
+    
+    //PGilcher: save the length t here for pdf ratio
+    vec3 wiStd = vec3(wi.xy * alpha, wi.z);
+    float t = length(wiStd);
+    wiStd /= t;   
+    
+    // sample a spherical cap in (-wi.z, 1]
+    float phi = (2.0f * u.x - 1.0f) * M_PI;
+    
+    float a = saturate(min( alpha.x, alpha.y)); // Eq. 6
+    float s = 1.0f + length(wi.xy); // Omit sgn for a <=1
+    float a2 = a * a; 
+    float s2 = s * s;
+    float k = (1.0 - a2) * s2 / (s2 + a2 * wi.z * wi.z); 
 
+    float b = wiStd.z;
+    b = wi.z > 0.0 ? k * b : b;
+
+   //PGilcher: compute ratio of unchanged pdf to actual pdf (ndf/2 cancels out)
+   //Dupuy's method is identical to this except that "k" is always 1, so
+   //we extract the differences of the PDFs (Listing 2 in the paper)
+    pdf_ratio = (k * wi.z + t) / (wi.z + t);    
+    
+    float z = (1.0f - u.y)*(1.0f + b) - b;
+    float sinTheta = sqrt(clamp(1.0f - z * z, 0.0f, 1.0f));
+    float x = sinTheta * cos(phi);
+    float y = sinTheta * sin(phi);
+    vec3 c = vec3(x, y, z);
+    // compute halfway direction as standard normal
+    vec3 wmStd = c + wiStd;
+    // warp back to the ellipsoid configuration
+    vec3 wm = normalize(vec3(wmStd.xy * alpha, wmStd.z));
+    // return final normal
+    return wm;
+}
+
+vec4 spherical_cap_new_vndf(in sample this_s)
+{
+        
+    mat3 TBN;  
+    TBN[0] = normalize(this_s.view - this_s.nor * dot(this_s.nor, this_s.view));
+    TBN[1] = cross(this_s.nor, TBN[0]); 
+    TBN[2] = this_s.nor;
+    
+    vec3 V_tangent = -this_s.view * TBN;
+    
+    // -- Generate uniform random variables between 0 and 1
+    uint seed = uint(jit_in.uv.x*2993) + uint(jit_in.uv.y*92241) + uint(11119);
+    int randomOffset = int(RandomFloat01(seed) * 64);
+
+    //read the current sample in the Halton sequence
+    int i = (frame + randomOffset) % 64; //*** move to vertex stage
+
+    vec2 u = halton[i];
+    float pdf_ratio;
+    vec3 H_tangent = SphericalCapBoundedWithPDFRatio(u.yx, V_tangent, vec2(this_s.rou), pdf_ratio);//sampleGGXVNDF(V_tangent, alpha, alpha, u.x, u.y);            
+    
+    vec3 L_tangent = reflect(-V_tangent, H_tangent);
+
+    //if(L_tangent.z <= 0.0) continue;        
+  
+    vec3 L = TBN * L_tangent;
+  
+    return vec4(L, pdf_ratio);
+}
 
 

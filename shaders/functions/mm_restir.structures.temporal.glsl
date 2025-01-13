@@ -3,7 +3,7 @@ uniform samplerCube environmentMap;
 uniform int frame;
 uniform vec2 texDim, mapSize;
 uniform mat4 prevMVP, invV, MV, MVP, VP, V, projmat, textureMatrix0;
-uniform float farClip;
+uniform float nearClip, farClip;
 uniform vec3 eye;
 
 in jit_PerVertex {
@@ -15,6 +15,10 @@ in jit_PerVertex {
 	flat vec4 plane_right;
 	flat vec4 plane_top;
 	flat vec4 plane_bottom;
+	flat vec3 U;
+	flat vec3 D;
+	flat vec3 L;
+	flat vec3 R;
 } jit_in;
 
 struct sample{

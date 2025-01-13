@@ -55,7 +55,11 @@ uniform sampler2DRect norDepthTex;
 void main(void) {
 
 	float depth = texture(norDepthTex, ivec2(jit_in.uv)).w;
-	outColor = depth == 0.0 ? vec4(1) : vec4( normalize(jit_in.dir)*depth*farClip, 1);
+	vec3 vPos = normalize(jit_in.dir)*depth;
+	outColor.rgb = depth < 1.0 ? vPos : vec3(vPos.xy, 100);
+	outColor.rgb *= farClip;
+	outColor.a = 1.0;
+	//outColor = depth == 0.0 ? vec4(1) : vec4( normalize(jit_in.dir)*depth*farClip, 1);
 }
 ]]>
 </program>

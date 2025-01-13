@@ -73,8 +73,8 @@ void main(void) {
 	ind *= alb; //modulate indirect by albedo
 	res += ind; //add indirect
 
-	//outFdbk.a = 1.0;
-	//outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
+	outFdbk.a = 1.0;
+	outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
 
 	//vec3 	kS = vec3(F);			//k specular
 	vec3 	kD = vec3(1);//vec3(1.0) - kS;	//k diffuse
@@ -93,8 +93,8 @@ void main(void) {
 	res += spe;
 
 	//uncorrect, but it looks better!
-	outFdbk.a = 1.0;
-	outFdbk.rgb = res;//mix(res, spe*0.3, rouMet.y);
+	//outFdbk.a = 1.0;
+	//outFdbk.rgb = res;//mix(res, spe*0.3, rouMet.y);
 
 	res += bkg; //add background environment
 

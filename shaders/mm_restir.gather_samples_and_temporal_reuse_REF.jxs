@@ -65,6 +65,7 @@
 		<bind param="frame" program="fp" />
 		<bind param="farCorner" program="vp" />
 		<bind param="nearClip" program="vp" />
+		<bind param="nearClip" program="fp" />
 		<bind param="eye" program="fp" />
 
 		<include source="mm_restir.structures.temporal.glsl" program="fp" />
@@ -92,6 +93,10 @@ out jit_PerVertex {
 	flat vec4 plane_right;
 	flat vec4 plane_top;
 	flat vec4 plane_bottom;
+	flat vec3 U;
+	flat vec3 D;
+	flat vec3 L;
+	flat vec3 R;
 } jit_out;
 
 uniform mat4 MVP;
@@ -139,6 +144,15 @@ void main(void) {
     jit_out.plane_top 		= computePlane(near_top_left, near_top_right, far_top_right); // Top plane
     jit_out.plane_bottom 	= computePlane(near_bottom_right, near_bottom_left, far_bottom_left); // Bottom plane
 
+	vec3 tr = normalize(farCorner);
+	vec3 tl = vec3(-tr.x, tr.y, tr.z);
+	vec3 br = vec3(tr.x, -tr.y, tr.z);
+	vec3 bl = vec3(-tr.x, -tr.y, tr.z);
+	jit_out.U = normalize(cross(tr, tl));
+	jit_out.D = normalize(cross(bl, br));
+	jit_out.L = normalize(cross(tl, bl));
+	jit_out.R = normalize(cross(br, tr));
+
 }
 ]]>
 </program>
@@ -149,7 +163,7 @@ void main(void) {
 
 layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outPhat;
-//layout (location = 2) out vec4 outTest;
+layout (location = 2) out vec4 outTest;
 
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
@@ -371,14 +385,101 @@ vec4 generate_ray_from_GGX_PDF(in sample this_s){
 
 }
 
+vec2 reproject(in vec3 p){
+	vec4 proj = projmat * vec4(p,1);
+	return (texDim-1) * (0.5*proj.xy/proj.w + 0.5);
+}
+
+float rayPlaneIntersectionUD(float t, vec3 ro, vec3 rd){
+
+	vec3 N = rd.y > 0.0 ? jit_in.U : jit_in.D;
+	return min(t, -dot(ro,N) / max(0.05, dot(rd,N)));
+}
+
+float rayPlaneIntersectionLR(float t, vec3 ro, vec3 rd){
+
+	vec3 N = rd.x > 0.0 ? jit_in.R : jit_in.L;
+	return min(t, -dot(ro,N) / max(0.05, dot(rd,N)));
+}
+
+float rayCapsIntersection(float t, vec3 ro, vec3 rd){
+
+	float offset = rd.z > 0 ? nearClip : -farClip;
+	float numerator = -ro.z*sign(rd.z) - offset;
+	return min(t, numerator / max(0.05, rd.z) );
+}
+
+float rayFrustumIntersection(vec3 ro, vec3 rd){
+
+	float t = 999999999;
+
+	//ray intersection with the frustum planes
+	t = rayPlaneIntersectionUD(t, ro, rd);
+	t = rayPlaneIntersectionLR(t, ro, rd);
+
+	//ray intersection with the frustum caps
+	t = rayCapsIntersection(t, ro, rd);
+
+	return t;
+}
+
+vec2 raytrace(vec3 P, vec3 N, vec3 V, vec3 R){
+
+	//Compute reflections
+	vec3 endPos = P + R*rayFrustumIntersection(P, R);
+	vec2 endFrag = reproject(endPos);
+	vec2 hitFrag = vec2(-1.0);
+
+	// Use Manhattan distance
+	vec2 fragDist = endFrag - jit_in.uv;
+	float numSteps = abs(fragDist.x) + abs(fragDist.y);
+
+	float coarse_step = 2;
+	float step = coarse_step / numSteps;
+	vec2 fragStep = fragDist * step;
+
+	vec2 testFrag = jit_in.uv;
+	float numerator = P.z*endPos.z;
+	float divisor = endPos.z;
+	float divisorStep = (P.z-endPos.z) * step;
+
+	float expectedDepth;
+	vec4 sampledDepth;
+
+	//corase search
+	for( float i = step; i < 1; i +=step ){
+
+		//march on the ray
+		testFrag += fragStep; 
+
+		//couldn't avoid this...
+		if(	testFrag.x < 0.0 || 
+			testFrag.y < 0.0 || 
+			testFrag.x >= texDim.x || 
+			testFrag.y >= texDim.y) return vec2(-1.0);
+
+		divisor += divisorStep;
+		expectedDepth = numerator / divisor;
+
+		//fetch depth
+		sampledDepth = texelFetch(depthsTex, ivec2(testFrag));
+
+		if( (sampledDepth.x > expectedDepth+0.01 && expectedDepth > sampledDepth.y+0.01) ||
+			(sampledDepth.z > expectedDepth+0.01 && expectedDepth > sampledDepth.w+0.01)){
+			return testFrag;
+		}
+	}
+	return vec2(-1.0);
+}
+
 vec4 get_sample_uv_or_dir(in sample this_s, inout uint seed){
 
-
 	//vec4 rayDir_reflectance = generate_ray_from_GGX_PDF(this_s);
-	vec4 rayDir_reflectance = generate_ray_from_GGX_VNDF(this_s);
+	//vec4 rayDir_reflectance = generate_ray_from_GGX_VNDF(this_s);
+	vec4 rayDir_reflectance = spherical_cap_new_vndf(this_s);
 
 	vec3 pivot = rayDir_reflectance.xyz;
-	float reflectance = rayDir_reflectance.w; //*** WHY DOESN'T WORK?!?
+	float reflectance = rayDir_reflectance.w;
 
 	//if the ray is shot below the floor, re-shot it randomly
 	bool valid = false;
@@ -392,130 +493,9 @@ vec4 get_sample_uv_or_dir(in sample this_s, inout uint seed){
  	
  	if(!valid) return vec4(0.0);
 
-	if(pivot.z > 0.999){
-	  return vec4(pivot, -reflectance);
-	}
+ 	vec2 hitFrag = raytrace(this_s.pos, this_s.nor, this_s.view, pivot);
 
-	float t = 999999;
-	float test_t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_near, test_t) ? 		min(t, test_t) : t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_far, test_t) ? 		min(t, test_t) : t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_left, test_t) ? 		min(t, test_t) : t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_right, test_t) ? 	min(t, test_t) : t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_top, test_t) ? 		min(t, test_t) : t;
-	t = get_exit_distance_from_frustum(this_s.pos, pivot, jit_in.plane_bottom, test_t) ? 	min(t, test_t) : t;
-
-	vec4 depths;// = startView;
-	vec4 endView;
-	vec4 startFrag;
-	vec4 endFrag;
-
-  	float resolution  = mix(0.1, 0.2, RandomFloat01(seed));// 0.1;
-  	int   steps       = 1;
- 	vec4 startView = vec4(this_s.pos, 1);
-
-  endView   = vec4(startView.xyz + pivot*t, 1);
-
-  startFrag    = startView;
-  startFrag.xy = this_s.uv;
-
-  endFrag      = endView;
-  endFrag      = projmat * endFrag;
-  endFrag.xy 	/= endFrag.w;
-  endFrag.xy   = endFrag.xy * 0.5 + 0.5;
-  endFrag.xy  *= texDim;
-
-  //return vec4( mix(startFrag.xy, endFrag.xy, vec2(RandomFloat01(seed))), 0.0, reflectance);
-
-  vec2 frag  = startFrag.xy;
-   //vec4   uv;
-   //uv.xy = frag/texDim;
-
-  float deltaX    = endFrag.x - startFrag.x;
-  float deltaY    = endFrag.y - startFrag.y;
-  float useX      = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
-  float delta     = mix(abs(deltaY), abs(deltaX), useX) * resolution;//clamp(resolution, 0.0, 1.0);
-  vec2  increment = vec2(deltaX, deltaY) / max(delta, 0.001);
-  frag += increment;// * (RandomFloat01(seed)*0.5) + increment*0.0001;
-
-  float search0 = 0;
-  float search1 = 0;
-
-  int hit0 = 0;
-  int hit1 = 0;
-
-  float viewDistance = startView.z;
-
-  float i = 0;
-
-  bool found = false;
-
-  for (i = 0; i < int(delta); i+=1) {
-    
-    	if(i >= int(delta)-1){
-    		//if the ray didn't hit any geometry, sample from the envionment map
-	
-    		//convert ray direction from view to world space
-    		return  vec4(pivot, -reflectance);
-	
-    		//to texture space
-    		//frag = vec2(atan(pivot.z, pivot.x), asin(pivot.y));
-    		//frag *= vec2(-0.1591549431, 0.3183098862);//vec2(-1/(2*M_PI), 1/M_PI); //to invert atan
-    		//frag += 0.5;
-    		//frag *= mapSize;
-    		//return -frag; //i use negative uv coordinates to instruct the following functions to take a sample from the env map
-    	}
-    //uv.xy      = frag / texDim;
-
-    depths = texture(depthsTex, frag);
-
-    search1 = mix( (frag.y - startFrag.y) / deltaY, (frag.x - startFrag.x) / deltaX, useX );
-    search1 = clamp(search1, 0.0, 1.0);
-
-    viewDistance = (startView.z * endView.z) / mix(endView.z, startView.z, search1);
-    //depth        = positionTo.r - viewDistance;
-
-    //if ( 	(depths.r >= viewDistance && viewDistance < depths.g ) || 
-    //			(depths.b >= viewDistance && viewDistance < depths.a ) ){
-    if(viewDistance < depths.r-0.07 && viewDistance > depths.g+0.07){
-    //if(depth > 0 && depth < thickness){
-      hit0 = 1;
-      found = true;
-      break;
-    } else {
-      search0 = search1;
-    }
-    frag += increment;
-  }
-
-  search1 = search0 + ((search1 - search0) / 2.0);// + (RandomFloat01(seed) - 0.5)*0.5;
-
-  steps *= hit0;
-
-  for (i = 0; i < steps; ++i) {
-    frag       = mix(startFrag.xy, endFrag.xy, search1);
-
-    //uv.xy      = frag / texDim;
-    depths = texelFetch(depthsTex, ivec2(frag));
-
-    viewDistance = (startView.z * endView.z) / mix(endView.z, startView.z, search1);
-    //depth        = positionTo.r - viewDistance;
-
-    //if ( 	(depths.r > viewDistance && viewDistance > depths.g) || 
-    //			(depths.b > viewDistance && viewDistance > depths.a) ){
-    if(viewDistance < depths.r-0.02 && viewDistance > depths.g+0.07){
-    //if(depth > 0 && depth < thickness){
-      hit1 = 1;
-      search1 = search0 + ((search1 - search0) / 2.0);
-    } else {
-      float temp = search1;
-      search1 = search0 + ((search1 - search0) / 2.0);
-      search0 = temp;
-    }
-  }
-
-  return vec4(frag,0,reflectance);
-
+ 	return hitFrag.x >= 0 ? vec4(hitFrag, 0.0, reflectance) : vec4(pivot, -reflectance);
 }
 
 
@@ -537,6 +517,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	for (int i = 0; i < M; i++)
 	{
 		sample_uv_or_dir = get_sample_uv_or_dir(this_s, seed);
+		outTest = sample_uv_or_dir.w > 0.0 ? vec4(sample_uv_or_dir.xy,0,1) : vec4(0.0);
 		
 		if(sample_uv_or_dir.x == 0) continue; //the random ray generator failed
 
