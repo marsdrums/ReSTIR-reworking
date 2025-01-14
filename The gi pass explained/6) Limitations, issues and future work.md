@@ -104,6 +104,14 @@ Alternatively, it would be worth considering splitting the search for intersecti
 
 Every frame, a "shadow ray" is traced to validate the previous frame reservoir (in the diffuse component computation). Shadow rays are traced using a very coarse step (about 50 taps per ray); still they might have an impact performance-wise. In many ReSTIR implementations i found, validation rays are usually limited, and not performed every frame, or every pixel. For example, the Kajiya renderer traces a validatioin ray every 3 frames; other ReSTIR based renderes, trace 1 validation ray per frame, but just for one out of four pixels. We could try to reduce the number or frequency of the validation rays to see if we can improve performance while mantaining good-looking results.
 
+## Precompute everything
+
+I'm performing some costly operations (such as sin() and cos()) pretty frequenctly in the code. It may be worth precumputing the result of such operations to skip heavy operation wherever possible
+
+## Minor and low level optimizations
+
+Here and there i'm performing unnecessary operations that can be removed. Also, the tracing algorithm could perform multiple texture fetches per iteration. Similarly, i should try turning conditionals to ternary assignemnts to see if performance improves.
+
 # Look
 
 The "gi" pass could look better than it currently does. In particular, there are two inter-related aspects that could be improved:
@@ -114,7 +122,7 @@ The ReSTIR algorithm is about noise reduction through fast convergence, but, of 
 
 About finding good samples, the diffuse component is pretty much "okay". I tried my best to make clever reuse of the resrvoirs, and the rendered images are quite converged. Still, some critical areas undergo visible fluctuations - in particular, occluded areas are tough to stabilize. This is due to the high variance in such areas, which prevents the use of large radii for the spatial reservoir reuse (otherwise, small scale details would look blurry and be lost). I'd like to try addressing the issue by increasing the number of samples gathered for such areas, and make temporal filtering operations more sever where it's needed.
 
-The specular component is the one more prone to noise. Although the directionality is much greater than the diffuse component, the lack of a reservoir's temporal reuse stage negatively affects the search for good candidate samples, which reflects in visible noise. The parameters used for spatial reuse and reservoir resolution must be further tweaked, and i think 
+The specular component is the one more prone to noise. Although the directionality is much greater than the diffuse component, the lack of a reservoir's temporal reuse stage negatively affects the search for good candidate samples, which reflects in visible noise. Moreover, the parameters used for spatial reuse and reservoir resolution must be further tweaked.
 
 ## Ghosting
 
@@ -126,4 +134,4 @@ Ghosting can also occur without disocclusion, particularly when lighting conditi
 
 Currently, color clipping is applied uniformly across the image. However, I plan to experiment with applying more aggressive temporal filtering to pixels in high-variance areas, such as occluded concave surfaces, where stronger filtering could be beneficial.
 
-A critical aspect for preventing ghosting in general is to use reliable motion vectors. While this is easy peasy for the diffuse component, thing become trickyer for reflections.
+A critical aspect for preventing ghosting in general is to use reliable motion vectors. While this is easy peasy for the diffuse component, thing become trickyer for reflections. 
