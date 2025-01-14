@@ -18,6 +18,12 @@ Currently, this remains the most critical limitation of the "gi" pass, as it mak
 
 In real-time sample-based rendering, TAA is useful not only for mitigating aliasing artifacts, but also for noise reduction. At the moment, enabling TAA after the "gi" pass produces visible color fluctuations. The reason for such artifacts should lie in the DEPTHPEEL target not being jittered - this produces depth values which are inconsistent with the rest of the rendered geometry, whch reflects in uncorrect ray tracing operations. Enabling projection matrix jittering for DEPTHPEEL should solve the issue.
 
+## Unalligned environment map
+
+It looks like the environment map shown in the background doesn't allign with reflection. 
+![](./images/allignement_issue.png)
+
+
 # Performance
 
 This is not a single issue, but rather a collection of things that nagatively impact performance.
@@ -51,6 +57,10 @@ https://sugulee.wordpress.com/2021/01/19/screen-space-reflections-implementation
 
 Alternatively, it would be worth considering splitting the search for intersections into a coarse search, and a finer one, using again linear marching or binary search.
 
+## Reducing validation tracing
+
+Every frame, a "shadow ray" is traced to validate the previous frame reservoir (in the diffuse component computation). Shadow rays are traced using a very coarse step (about 50 taps per ray); still they might have an impact performance-wise. In many ReSTIR implementations i found, validation rays are usually limited, and not performed every frame, or every pixel. For example, the Kajiya renderer traces a validatioin ray every 3 frames; other ReSTIR based renderes, trace 1 validation ray per frame, but just for one out of four pixels. We could try to reduce the number or frequency of the validation rays to see if we can improve performance while mantaining good-looking results.
+
 # Look
 
 The "gi" pass could look better than it currently does. In particular, there are two inter-related aspects that could be improved:
@@ -61,7 +71,7 @@ The ReSTIR algorithm is about noise reduction through fast convergence, but, of 
 
 About finding good samples, the diffuse component is pretty much "okay". I tried my best to make clever reuse of the resrvoirs, and the rendered images are quite converged. Still, some critical areas undergo visible fluctuations - in particular, occluded areas are tough to stabilize. This is due to the high variance in such areas, which prevents the use of large radii for the spatial reservoir reuse (otherwise, small scale details would look blurry and be lost). I'd like to try addressing the issue by increasing the number of samples gathered for such areas, and make temporal filtering operations more sever where it's needed.
 
-The specular component is the one more prone to noise. Although the directionality is much greater than the diffuse component, the lack of a reservoir's temporal reuse stage negatvely affects the search for good candidate samples, which reflects in visible noise. That said, the parameters used for spatial reuse and reservoir resolution must be further tweaked.
+The specular component is the one more prone to noise. Although the directionality is much greater than the diffuse component, the lack of a reservoir's temporal reuse stage negatively affects the search for good candidate samples, which reflects in visible noise. The parameters used for spatial reuse and reservoir resolution must be further tweaked, and i think 
 
 ## Ghosting
 

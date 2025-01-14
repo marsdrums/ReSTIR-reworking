@@ -13,6 +13,11 @@ The "gi" pass relies on many inputs; some of them are the render targets provide
 - Roughness and metalness buffer: it contains the roughness and metalness values as processed by jit.gl.pbr in the red and green channels respectively
 - 4 layers of depth: it contains four layers of depth (view-space.z) obtained through depth peeling. R = closest front face depth; G = closest back face depth; B = second closest front face depth; A = second closest back face depth. Having 4 depth layers improves the accuracy of screen-space ray marching. The view-space Z position is represented by negative in Jitter.
 
+Moreover, having 4 layers of depth improves the screen-space reflections look - typically, SSR can't be used to reflect what's not visible in the viewport, leading to faulty reflections of the objects back faces. The 4 depth layers allow to correctly reflect the objects back faces. The colors aren't correct (color are sampled from the front face), but the geometry is, and overall, IMHO it looks better than no reflection at all.
+
+![](./images/back-face_reflections.png)
+Example of back face reflections
+
 ## Velocity inflation and disocclusion weights
 
 Velocity vectors are used to temporally reproject data from the previous frame onto the current frame. Temporal reprojection serves two key purposes: enabling the temporal reuse of reservoirs and supporting temporal filtering. 
