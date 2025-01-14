@@ -6,6 +6,8 @@ The "gi" pass is far from being perfect, but there should be room for improvemen
 
 ## Blackouts
 
+![](./images/blackout.png)
+
 The rendering occasionally becomes abruptly unstable, causing black areas to appear on the screen. The only way to resolve this is by re-instantiating the pass or quickly moving the camera around. After recent updates to the "gi" algorithm, these blackouts have become significantly less frequent, but they still occur unpredictably.
 
 I do not yet have a precise understanding of the root cause, so I am unable to fully resolve the issue. However, I suspect the problem lies in the part of the algorithm responsible for computing reflections, as rendering only the diffuse component has never caused this artifact to appear. The nature of the artifact suggests a potential division by zero or faulty memory access somewhere in the code. Additionally, the spatio-temporal reservoir reuse mechanism seems to gradually "spread" the black areas across the rendered image.
