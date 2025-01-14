@@ -14,6 +14,21 @@ To identify and address the problem, I will need to use an analysis tool for a m
 
 Currently, this remains the most critical limitation of the "gi" pass, as it makes the algorithm unreliable for real-world use cases.
 
+## Incorrect temporal reprojection
+
+This refers to a problem regarding the accuracy of reservoir's temporal reuse which i don't know how to address. Let me break it down:
+
+![](./images/backproject1.png)
+
+Let's say we have a pixel $P$ sitting on a plane in the current frame $f$; The reservoir in $P$ holds its favourite sample, which is the point $Q$. If the plane moves from one frame to the next shifting to the right, from the new location $P_f$, it's possible to temporally reuse the previous frame reservoir:
+1) Access the velocity vector in $P_f$.
+2) Subtract the velocity vector from $P_f$'s texture coordinates to get $P_{f-1}$, that is the location of $P_f$ at the previous frame.
+3) Read the previous-frame reservoir in $P_{f-1}$
+
+The same applies if the camera moves - as long as the the objects on which $P$ sits, or the camera moves from one frame to the next, it's always possible to succesfully reproject the previous frame reservoir.
+
+The problem arises when the object on which is $Q$ moves from frame to frame.
+
 ## Unsupported TAA
 
 In real-time sample-based rendering, TAA is useful not only for mitigating aliasing artifacts, but also for noise reduction. At the moment, enabling TAA after the "gi" pass produces visible color fluctuations. The reason for such artifacts should lie in the DEPTHPEEL target not being jittered - this produces depth values which are inconsistent with the rest of the rendered geometry, whch reflects in uncorrect ray tracing operations. Enabling projection matrix jittering for DEPTHPEEL should solve the issue.
@@ -86,4 +101,4 @@ Ghosting can also occur without disocclusion, particularly when lighting conditi
 
 Currently, color clipping is applied uniformly across the image. However, I plan to experiment with applying more aggressive temporal filtering to pixels in high-variance areas, such as occluded concave surfaces, where stronger filtering could be beneficial.
 
-A critical aspect for preventing ghosting in general is to use reliable motion vectors.
+A critical aspect for preventing ghosting in general is to use reliable motion vectors. While this is easy peasy for the diffuse component, thing become trickyer for reflections.
