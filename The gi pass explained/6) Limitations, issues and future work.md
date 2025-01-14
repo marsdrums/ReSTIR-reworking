@@ -1,6 +1,6 @@
 # Limitations, issues and future work
 
-The "gi" pass is far from being perfect, but there should be room for improvement. This is a list of the critical aspects of the current state of the algorithm, arranged by cathegory.
+The "gi" pass is far from being perfect, but there should be room for improvement. This is a list of critical aspects of the current state of the algorithm, arranged by cathegory.
 
 # Known issues
 
@@ -63,7 +63,7 @@ It looks like the environment map shown in the background doesn't allign with re
 
 Currently, i'm rendering reflections first, and then diffuse. There's absoutely no point in doing that! I'll reverse the order so that reflection can computed on the current-frame diffuse computation. This requires splitting the compositing stage in two: first, add direct and indirect diffuse, then compute reflections, then composite all together.
 
-## Reflrction rendered in the COLOR render target
+## Direct specular rendered in the COLOR render target
 
 During the forward phase, PBR shading is rendered to the COLOR target, which includes both direct diffuse and direct specular components. However, using the COLOR target as a source for indirect illumination creates an issue: direct specular lighting is view-dependent and should not contribute to indirect illumination. For instance, when a smooth surface is hit by strong light, its reflection can end up incorrectly illuminating other parts of the scene.
 
