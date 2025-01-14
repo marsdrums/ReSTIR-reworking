@@ -2,6 +2,7 @@
 
 ![](./images/algorithm-scheme.png)
 
+
 The "gi" pass relies on many inputs; some of them are the render targets provided by jit.gl.pbr, whether taken directly or after some processing, some others are the result of the previous frame reprojected onto the current one.
 
 ## The render targets
