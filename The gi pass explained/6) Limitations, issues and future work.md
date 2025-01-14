@@ -61,6 +61,10 @@ It looks like the environment map shown in the background doesn't allign with re
 
 Currently, i'm rendering reflections first, and then diffuse. There's absoutely no point in doing that! I'll reverse the order so that reflection can computed on the current-frame diffuse computation. This requires splitting the compositing stage in two: first, add direct and indirect diffuse, then compute reflections, then composite all together.
 
+## Reflrction rendered in the COLOR render target
+
+During the forward phase, pbr shading rendered to the COLOR target. It comprises both direct diffuse and direct specural. The COLOR target is used as source for indirect illumination, and having direct specular light rendered into is no bueno: reflections are view-dependent, and should't contribute to the indirect illumination. If a surface is smooth and hit by a strong light, the reflection on such surface illuminates the rest of the scene.
+
 # Performance
 
 This is not a single issue, but rather a collection of things that nagatively impact performance.
