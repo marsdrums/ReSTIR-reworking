@@ -39,10 +39,12 @@ I thought about a way to approximate the answer, but i didn't try it yet. It's b
 
 ![](./images/backproject3.png)
 
-1) Backproject $P_f$ to $P_{f-1}$.
-2) Access the reservoir in $P_{f-1}$ to access the sample $Q_{f-1}$.
-3) The location of $Q_{f-1}$, read the previous frame velocity vector $V_f$.
-4) Subtract the velocity vector to the position of $Q_f$ to estimate its location in $f$
+1) Backproject $P_f$ using velocity vectors to find $P_{f-1}$.
+2) Access the reservoir in $P_{f-1}$ and see where's the sample $Q_{f-1}$.
+3) At the location of $Q_{f-1}$, read the previous-frame velocity vector $V_{f-1}$.
+4) Subtract $V_{f-1}$ from the position of $Q_{f-1}$ to estimate $Q_f$.
+
+It should work on paper, but maybe not! Maybe you have better ideas about how to solve this issue.
 
 ## Unsupported TAA
 
