@@ -27,7 +27,22 @@ Let's say we have a pixel $P$ sitting on a plane in the current frame $f$; The r
 
 The same applies if the camera moves - as long as the the objects on which $P$ sits, or the camera moves from one frame to the next, it's always possible to succesfully reproject the previous frame reservoir.
 
-The problem arises when the object on which is $Q$ moves from frame to frame.
+The problem arises when the object on which $Q$ is moves from frame to frame.
+
+![](./images/backproject2.png)
+
+How can i inform $P$ in $f$ about the new sample location $Q_f$? I couldn't find any way to easily do it...
+
+In world-space ReSTIR that's relatively straightforward becuase there's a buffer containing the triangles. If we represent $Q$ by the index of the triangle in the buffer, it's easy to retrieve it's location in any frame. 
+
+I thought about a way to approximate the answer, but i didn't try it yet. It's based on the assumption that an object which went through a displacement from $f-1$ to $f$, also went through the same displacement from $f-2$ to $f-1$. This is how it could work:
+
+![](./images/backproject3.png)
+
+1) Backproject $P_f$ to $P_{f-1}$.
+2) Access the reservoir in $P_{f-1}$ to access the sample $Q_{f-1}$.
+3) The location of $Q_{f-1}$, read the previous frame velocity vector $V_f$.
+4) Subtract the velocity vector to the position of $Q_f$ to estimate its location in $f$
 
 ## Unsupported TAA
 
