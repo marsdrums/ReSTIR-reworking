@@ -75,4 +75,10 @@ The specular component is the one more prone to noise. Although the directionali
 
 ## Ghosting
 
-Even with an optimal reuse of the reservoirs, noise is unavoidable. For this reason, a color filtering stage is mandatory. Ghosting is a visual artifact directly related to temporal filtering - when combining colors over succesive frames, pixels are temporally reprojected using velocity vectors to access the 
+Even with optimal reservoir reuse, noise is inevitable, making a color filtering stage essential. Ghosting is a common visual artifact associated with temporal filtering, often occurring when pixels become disoccluded and color history is not properly invalidated. Detecting when a pixel has been disoccluded can be approached in several ways. Currently, I am using the method described in the third section of this article, though it is not necessarily the most precise or only solution.
+
+A more robust disocclusion criterion could be achieved by assigning a unique ID to each triangle and rendering these IDs as a color value. After the reprojection process, if the triangle's ID remains the same, temporal reprojection is considered valid, and the color history can be reused. If the ID changes, a disocclusion has occurred, and the color history for that pixel must be discarded. Implementing this approach would require a reliable method for assigning unique IDs to rendered triangles.
+
+Ghosting can also occur without disocclusion, particularly when lighting conditions change abruptly. In such cases, ghosting artifacts can be mitigated by enforcing consistency between the current pixel and its neighbors. This color rectification process can be implemented through techniques such as color clamping or color clipping. The severity of this process can be adjusted depending on whether a pixel requires stronger color filtering or faster responsiveness to lighting changes.
+
+Currently, color clipping is applied uniformly across the image. However, I plan to experiment with applying more aggressive temporal filtering to pixels in high-variance areas, such as occluded concave surfaces, where stronger filtering could be beneficial.
