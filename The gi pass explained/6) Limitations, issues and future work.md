@@ -106,7 +106,7 @@ Every frame, a "shadow ray" is traced to validate the previous frame reservoir (
 
 ## Precompute everything
 
-I'm performing some costly operations (such as sin() and cos()) pretty frequenctly in the code. It may be worth precumputing the result of such operations to skip heavy operation wherever possible
+I'm performing some costly operations (such as sin() and cos()) pretty frequenctly in the code. It may be worth precumputing the result of such operations to skip them whenever possible.
 
 ## Minor and low level optimizations
 
