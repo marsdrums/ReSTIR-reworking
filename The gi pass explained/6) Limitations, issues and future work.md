@@ -49,7 +49,7 @@ Moreover, the DEPTHPEEL render targets is used for ray-tracing operations only, 
 
 On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes. For example, we could transform cartesian coordinates into polar coordinates, and use a single wrapped value to store the direction; this comes at the additional cost of encoding/deconding operations and probably a precision loss. Still, it may be worth it anyway (in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1).
 
-There're many operations i keep repeating, such as orthonormal basis computation - i wonder if it may be worth to compute it once and pass it as textures.
+There're many operations i keep repeating over and over, such as orthonormal basis computation - i wonder if it may be worth precomputing these common values and provide them using textures.
 
 ## Raytracing improvements
 
