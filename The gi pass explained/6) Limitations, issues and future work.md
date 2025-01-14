@@ -87,6 +87,15 @@ Still, the cost of packing/unpacking data must considered.
 
 Moreover, the DEPTHPEEL render targets is used for ray-tracing operations only, which happen at half-resolution - I'd like to try rendering such target at half-res directly, to cut it's memory footprint to a quarter, and to improve the performance of the depth-peeling process itself.
 
+The Kajiya renderer uses compression to squeeze data into a small and tight G-buffer. Following the same principle, we could try to use ad-hoc data compression to further reduce memory usage:
+
+![](./images/packed_render_targets2.png)
+
+Here data is compressed into a 32-bit render target and a 16-bit (half-res) render target, for a total of 1,8mb per pixel, against the current 4mb per pixel.
+Here some example code for data encoding/decoding:
+https://www.shadertoy.com/view/DtfBW8
+https://www.shadertoy.com/view/llfcRl
+
 On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes, in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1. This could be a possible approach: https://www.shadertoy.com/view/ws2yDt
 
 ## Raytracing improvements
