@@ -9,12 +9,6 @@ uniform vec3 eye;
 in jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 	flat vec3 U;
 	flat vec3 D;
 	flat vec3 L;

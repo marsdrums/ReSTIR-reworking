@@ -23,6 +23,9 @@ In real-time sample-based rendering, TAA is useful not only for mitigating alias
 It looks like the environment map shown in the background doesn't allign with reflection. 
 ![](./images/allignement_issue.png)
 
+## Diffuse - reflections order
+
+Currently, i'm rendering reflections first, and then diffuse. There's absoutely no point in doing that! I'll reverse the order so that reflection can computed on the current-frame diffuse computation. This requires splitting the compositing stage in two: first, add direct and indirect diffuse, then compute reflections, then composite all together.
 
 # Performance
 
@@ -82,3 +85,5 @@ A more robust disocclusion criterion could be achieved by assigning a unique ID 
 Ghosting can also occur without disocclusion, particularly when lighting conditions change abruptly. In such cases, ghosting artifacts can be mitigated by enforcing consistency between the current pixel and its neighbors. This color rectification process can be implemented through techniques such as color clamping or color clipping. The severity of this process can be adjusted depending on whether a pixel requires stronger color filtering or faster responsiveness to lighting changes.
 
 Currently, color clipping is applied uniformly across the image. However, I plan to experiment with applying more aggressive temporal filtering to pixels in high-variance areas, such as occluded concave surfaces, where stronger filtering could be beneficial.
+
+A critical aspect for preventing ghosting in general is to use reliable motion vectors.
