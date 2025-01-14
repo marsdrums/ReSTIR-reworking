@@ -172,6 +172,7 @@ vec3 SphericalCapBoundedWithPDFRatio(vec2 u, vec3 wi, vec2 alpha, out float pdf_
 
 vec4 spherical_cap_new_vndf(in sample this_s)
 {
+    // https://www.shadertoy.com/view/MX3XDf
         
     mat3 TBN;  
     TBN[0] = normalize(this_s.view - this_s.nor * dot(this_s.nor, this_s.view));
