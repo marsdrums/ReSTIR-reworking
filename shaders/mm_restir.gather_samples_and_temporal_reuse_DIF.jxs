@@ -150,6 +150,27 @@ layout (location = 1) out vec4 outPhat;
 
 uniform int enable_temporal_DIF;
 
+float packvec3(in vec3 v) 
+{
+	vec4 x = vec4(v, 1);
+	x = clamp(x, -1.0, 1.0) * 127.0;
+    uvec4 sig = uvec4(mix(vec4(0), vec4(1), greaterThanEqual(sign(x),vec4(0))));
+    uvec4 mag = uvec4(abs(x));
+    uvec4 r = sig << 7 | mag;
+	uint ui = r.x << 24 | r.y << 16 | r.z << 8 | r.w;
+	return uintBitsToFloat(ui);
+}
+vec3 unpackvec3(in float f) 
+{
+	uint ui = floatBitsToUint(f);
+	uvec4 r = (uvec4(ui) >> uvec4(24, 16, 8, 0)) & uvec4(0xFF);
+    uvec4 sig = r >> 7;
+    uvec4 mag = r & uvec4(0x7F);
+    vec4 fsig = mix(vec4(-1), vec4(1), greaterThanEqual(sig,uvec4(1)));
+    vec4 fmag = vec4(mag) / 127.0;
+	return (fsig * fmag).xyz;
+}
+
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*37173) + uint(jit_in.uv.y*28842) + uint(frame*37711);
 }
