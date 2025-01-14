@@ -89,8 +89,6 @@ Moreover, the DEPTHPEEL render targets is used for ray-tracing operations only, 
 
 On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes. For example, we could transform cartesian coordinates into polar coordinates, and use a single wrapped value to store the direction; this comes at the additional cost of encoding/deconding operations and probably a precision loss. Still, it may be worth it anyway (in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1).
 
-There're many operations i keep repeating over and over, such as orthonormal basis computation - i wonder if it may be worth precomputing these common values and provide them using textures.
-
 ## Raytracing improvements
 
 At the moment, raytracing is employed in reservoir validation and in sample gathering for reflections. Screen space raytracing happens by marching along a ray while depth testing like no-brainer. I'm already trying to avoid under/over stepping, but i think tracing operations could be greatly improved. I'd like to employ an acceleration structure to speed up the process, building a depth hierarchy storing the min and max depths into higher and higer texture mip levels. These are some resources that could help figuring out how to implement such an acceleration structure:
@@ -106,7 +104,7 @@ Every frame, a "shadow ray" is traced to validate the previous frame reservoir (
 
 ## Precompute everything
 
-I'm performing some costly operations (such as sin() and cos()) pretty frequenctly in the code. It may be worth precumputing the result of such operations to skip them whenever possible.
+I'm performing some costly operations (such as sin() and cos()) pretty frequenctly in the code. It may be worth precumputing the result of such operations to skip them whenever possible. Also, there're many operations i keep repeating over and over on the same data, such as orthonormal basis computation - i wonder if it may be worth precomputing these common values and provide them using textures.
 
 ## Minor and low level optimizations
 
