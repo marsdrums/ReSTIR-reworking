@@ -1,6 +1,8 @@
 # Limitations, issues and future work
 
-The "gi" pass is far from being perfect, but there should be room for improvement. This is a list of the critical aspects of the current state of the algorithm, somewhat sorted by relevance (i'm importance sampling the issues...).
+The "gi" pass is far from being perfect, but there should be room for improvement. This is a list of the critical aspects of the current state of the algorithm, arranged by cathegory.
+
+# Known issues
 
 ## Blackouts
 
@@ -12,11 +14,15 @@ To identify and address the problem, I will need to use an analysis tool for a m
 
 Currently, this remains the most critical limitation of the "gi" pass, as it makes the algorithm unreliable for real-world use cases.
 
-## Performance
+## Unsupported TAA
+
+In real-time sample-based rendering, TAA is useful not only for mitigating aliasing artifacts, but also for noise reduction. At the moment, enabling TAA after the "gi" pass produces visible color fluctuations. The reason for such artifacts should lie in the DEPTHPEEL target not being jittered - this produces depth values which are inconsistent with the rest of the rendered geometry, whch reflects in uncorrect ray tracing operations. Enabling projection matrix jittering for DEPTHPEEL should solve the issue.
+
+# Performance
 
 This is not a single issue, but rather a collection of things that nagatively impact performance.
 
-### Memory bandwidth
+## Memory bandwidth
 
 This seems to be the most significant performance bottleneck (as it quite always is with deferred rederers). The "gi" pass relies on multiple texture inputs, and passing large textures around put a lot of pressure on the GPU. Setting the bit depth of each individual texture and shader to the minimum acceptable value greatly speeds up the process. At the moment, i kept every input and shader at float32, willing to reduce the bit depth of each input and processing stage to see where we can save some memory.
 
@@ -32,13 +38,31 @@ Still, the cost of packing/unpacking data must considered.
 
 Moreover, the DEPTHPEEL render targets is used for ray-tracing operations only, which happen at half-resolution - I'd like to try rendering such target at half-res directly, to cut it's memory footprint to a quarter.
 
-On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces use to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes. For example, i could transform cartesian coordinates into polar coordinates, and use a single wrapped value to store the direction; this comes at the additional cost of encoding/deconding operations and (propably) a precision loss. Still, it may be worth it anyway (in particular for the diffuse component, where directional precision is not necessary since we're fetching from LoD = 1).
+On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes. For example, we could transform cartesian coordinates into polar coordinates, and use a single wrapped value to store the direction; this comes at the additional cost of encoding/deconding operations and probably a precision loss. Still, it may be worth it anyway (in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1).
 
 There're many operations i keep repeating, such as orthonormal basis computation - i wonder if it may be worth to compute it once and pass it as textures.
 
-### Raytracing improvements
+## Raytracing improvements
 
-At the moment, raytracing is employed in reservoir validation and in sample gathering for reflections. Screen space raytracing happens by marching along a ray while depth testing. I'm already trying to avoid under/over stepping, but i think the tracing operations could be greatly improved. I'd like to employ an acceleration structure to speed up the process, building a depth hierarchy storing the min and max depths into higher and higer texture mip levels. These are some resources that could help figuring out how to implement such an acceleration structure:
+At the moment, raytracing is employed in reservoir validation and in sample gathering for reflections. Screen space raytracing happens by marching along a ray while depth testing like no-brainer. I'm already trying to avoid under/over stepping, but i think tracing operations could be greatly improved. I'd like to employ an acceleration structure to speed up the process, building a depth hierarchy storing the min and max depths into higher and higer texture mip levels. These are some resources that could help figuring out how to implement such an acceleration structure:
 https://research.nvidia.com/sites/default/files/pubs/2015-08_An-Adaptive-Acceleration/AcceleratedSSRT_HPG15.pdf
 https://selgrad.org/publications/2017_hpg_HBSS.pdf
 https://sugulee.wordpress.com/2021/01/19/screen-space-reflections-implementation-and-optimization-part-2-hi-z-tracing-method/
+
+Alternatively, it would be worth considering splitting the search for intersections into a coarse search, and a finer one, using again linear marching or binary search.
+
+# Look
+
+The "gi" pass could look better than it currently does. In particular, there are two inter-related aspects that could be improved:
+
+## Noise
+
+The ReSTIR algorithm is about noise reduction through fast convergence, but, of course, some noise in the rendered images is unavoidable. Further noise reduction can be achieved in two ways: finding better candidate samples for importance sampling, and improving filtering operations.
+
+About finding good samples, the diffuse component is pretty much "okay". I tried my best to make clever reuse of the resrvoirs, and the rendered images are quite converged. Still, some critical areas undergo visible fluctuations - in particular, occluded areas are tough to stabilize. This is due to the high variance in such areas, which prevents the use of large radii for the spatial reservoir reuse (otherwise, small scale details would look blurry and be lost). I'd like to try addressing the issue by increasing the number of samples gathered for such areas, and make temporal filtering operations more sever where it's needed.
+
+The specular component is the one more prone to noise. Although the directionality is much greater than the diffuse component, the lack of a reservoir's temporal reuse stage negatvely affects the search for good candidate samples, which reflects in visible noise. That said, the parameters used for spatial reuse and reservoir resolution must be further tweaked.
+
+## Ghosting
+
+Even with an optimal reuse of the reservoirs, noise is unavoidable. For this reason, a color filtering stage is mandatory. Ghosting is a visual artifact directly related to temporal filtering - when combining colors over succesive frames, pixels are temporally reprojected using velocity vectors to access the 
