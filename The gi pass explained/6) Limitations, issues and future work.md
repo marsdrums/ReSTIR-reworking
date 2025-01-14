@@ -63,7 +63,7 @@ Currently, i'm rendering reflections first, and then diffuse. There's absoutely 
 
 ## Reflrction rendered in the COLOR render target
 
-During the forward phase, pbr shading rendered to the COLOR target. It comprises both direct diffuse and direct specural. The COLOR target is used as source for indirect illumination, and having direct specular light rendered into is no bueno: reflections are view-dependent, and should't contribute to the indirect illumination. If a surface is smooth and hit by a strong light, the reflection on such surface illuminates the rest of the scene.
+During the forward phase, PBR shading is rendered to the COLOR target, which includes both direct diffuse and direct specular components. However, using the COLOR target as a source for indirect illumination creates an issue: direct specular lighting is view-dependent and should not contribute to indirect illumination. For instance, when a smooth surface is hit by strong light, its reflection can end up incorrectly illuminating other parts of the scene.
 
 # Performance
 
