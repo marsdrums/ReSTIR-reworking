@@ -178,7 +178,7 @@ void main(void) {
 	ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
 	float index = float(frame)*float(num_samples);
 
-	float hitDist = 1000;
+	float hitDist = 100;
 	if(reservoir.y > 0){
 		test_s = get_sample_pos_col(int(reservoir.y));	
 		hitDist = length(this_s.pos - test_s.pos)+0.05;	

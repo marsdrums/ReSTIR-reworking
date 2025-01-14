@@ -128,7 +128,7 @@ sample get_sample_dir_col_for_env_jittered(int index, inout uint seed){
 
 sample get_environment_sample(in vec3 candidate_dir, inout uint seed, in float rou){
 	sample s;
-	s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, rou*4).rgb;
+	s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, 0.0).rgb;
 	//s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, 0.0).rgb;
 	s.nor = candidate_dir;
 	//s.pos = s.nor;

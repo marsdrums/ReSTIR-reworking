@@ -14,6 +14,80 @@
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
+					"attr" : "metalness",
+					"id" : "obj-168",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 1147.0, 1436.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "roughness",
+					"id" : "obj-169",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 1095.0, 1486.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-167",
+					"maxclass" : "newobj",
+					"numinlets" : 8,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 904.0, 1602.0, 432.0, 22.0 ],
+					"text" : "jit.gl.pbr @gamma_correction 0 @shadow_eps 0.04 @mat_diffuse 0.5 0.5 0.5 1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-165",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "bang" ],
+					"patching_rect" : [ 795.0, 1404.0, 58.0, 22.0 ],
+					"text" : "loadbang"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-164",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 2,
+					"outlettype" : [ "jit_matrix", "" ],
+					"patching_rect" : [ 796.0, 1477.0, 314.0, 22.0 ],
+					"text" : "jit.gl.model @file duck.dae @matrixoutput 2 @scale 2 2 2"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-163",
+					"maxclass" : "newobj",
+					"numinlets" : 9,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 760.0, 1560.0, 254.0, 22.0 ],
+					"text" : "jit.gl.mesh @position -3 1 0 @rotatexyz 0 90 0"
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"attr" : "position",
 					"id" : "obj-161",
 					"maxclass" : "attrui",
@@ -546,7 +620,7 @@
 			}
 , 			{
 				"box" : 				{
-					"attr" : "radius_3",
+					"attr" : "setEnvDist",
 					"id" : "obj-64",
 					"maxclass" : "attrui",
 					"numinlets" : 1,
@@ -1887,8 +1961,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_geometry", "" ],
-					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 171.0, 22.0 ],
-					"text" : "jit.geom.xform @scale 30 1 30"
+					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 167.0, 22.0 ],
+					"text" : "jit.geom.xform @scale 5 0.1 5"
 				}
 
 			}
@@ -2629,6 +2703,41 @@
 				"patchline" : 				{
 					"destination" : [ "obj-160", 0 ],
 					"source" : [ "obj-162", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-163", 0 ],
+					"source" : [ "obj-164", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-164", 0 ],
+					"source" : [ "obj-165", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-163", 0 ],
+					"source" : [ "obj-167", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-167", 0 ],
+					"source" : [ "obj-168", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-167", 0 ],
+					"source" : [ "obj-169", 0 ]
 				}
 
 			}

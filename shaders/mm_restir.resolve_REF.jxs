@@ -29,8 +29,8 @@
 	<param name="farCorner" type="vec3" state="FAR_CORNER" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
 
-	<param name="spiralRadius_REF" type="float" default="0.0005" />
-	<param name="setEnvDist" type="float" default="1000" />
+	<param name="spiralRadius_REF" type="float" default="3" />
+	<param name="setEnvDist" type="float" default="100" />
 
 	<language name="glsl" version="1.5">
 		<bind param="reservoirTex" program="fp" />

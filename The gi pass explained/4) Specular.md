@@ -13,7 +13,7 @@ Reflections computation includes the following steps:
 ## Sample gathering (half-res)
 ( shader: restir.gather_samples_and_temporal_reuse_REF.jxs )
 
-Samples are gathered differently than the diffuse pass - instead of picking random samples from the viewport and from the environment map, the gathering process is based on screen-space ray tracing. From the shaded point, a ray is generated in a directions determined by the microfacet NDF (more on that later). The ray tracing consists in marching along the ray in screen-space to find intersections with the visible geometry. If the ray intersects the geometry, a sample is taken from the viewport at the corresponding location; if no intersection is found (the ray exits the screen without intersecting anything), the environment map is sampled instead.
+Samples are gathered differently than the diffuse pass - instead of picking random samples from the viewport and from the environment map, the gathering process is based on screen-space ray tracing. From the shaded point, a ray is generated in a directions determined by the microfacet NDF (more on that later). The ray tracing consists in marching along the ray in screen-space to find intersections with the visible geometry. If the ray intersects the geometry, a sample is taken from the viewport at the corresponding location; if no intersection is found (the ray exits the screen without intersecting anything), the environment map is sampled instead. 
 
 >[!NOTE]
 > Reflections are more directional than the lambertian component of the BRDF, therefore the most solid method i experimented to gather useful samples was to ray trace the scene. I'm currently gathering just one sample per frame because the ray tracing operation is quite costly.
@@ -28,7 +28,11 @@ The distribution of facet orientations is described by a normal distribution fun
 
 To generate coherent ray directions, i'm importance sampling the NDF of the microfacets. The NDF distribution model i'm using is the GGX distribution of Visible Normals (GGX VNDF). More on this topic here: https://jcgt.org/published/0007/04/01/paper.pdf, https://schuttejoe.github.io/post/ggximportancesamplingpart2/, https://www.youtube.com/watch?v=MkFS6lw6aEs. 
 
-To maximize convergence time, the random sampling cycles through the first 64 elements of the quasi-random sequence Halton (2,3). For each pixel, the sequence starts from a different random index, and the sampling kernel is randomly rotated. 
+To maximize convergence time, the random sampling cycles through the first 64 elements of the quasi-random sequence Halton (2,3). For each pixel, the sequence starts from a different random index, and the sampling kernel is randomly rotated. If a ray generated within the BRDF NDF happens to be shot below the floor, it's randomly generated again:
+
+![](./images/invalid_ray.png)
+Example of invalid ray direction
+
 See the shader restir.BRDF.glsl to take a look at the functions used to sample the NDF.
 
 Once a sample is found, it gets weighted. Weighting reflection samples is different than weighting diffuse samples. This is the function used for weighting (contained inside restir.common.glsl), which uses a pretty standard PBR shading model:
@@ -70,7 +74,7 @@ vec3 get_specular_radiance(in sample this_s, in sample test_s){
     
     //Estimator
     //Fresnel * Shadowing
-    //Much simpler than brdf * costheta / pdf heh
+    //Much simpler than brdf * costheta / pdf 
     vec3 estimator = F * (G2 / G1);
 
     //Output
