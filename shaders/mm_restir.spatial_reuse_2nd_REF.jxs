@@ -141,7 +141,8 @@ void main(void) {
 	uint seed = get_rng_seed();
 	sample this_s = get_sample(uv2index(jit_in.uv));
 	if(this_s.depth >= 1){
-		//outColor = vec4(0.0);
+		outReservoir = vec4(0.0);
+		outBestWpos = vec4(0.0);
 		return;
 	}
 
