@@ -93,10 +93,10 @@ The Kajiya renderer uses compression to squeeze data into a small and tight G-bu
 
 Here data is compressed into a 32-bit render target and a 16-bit (half-res) render target, saving 55% of memory bandwidth.
 Here some example code for data encoding/decoding:
-https://www.shadertoy.com/view/DtfBW8
+https://www.shadertoy.com/view/DtfBW8, 
 https://www.shadertoy.com/view/llfcRl
 
-On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes, in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1. This could be a possible approach: https://www.shadertoy.com/view/ws2yDt
+On the same line, i'm storing the index of the samples from the environment as a direction. This consumes 3 channels of a texture and forces us to use another output other than the reservoir texture. I'd like to try using a different method to store such indexes, in particular for the diffuse component, where directional precision is not strictly necessary since we're fetching from LoD = 1. 32-bit octahedral compression could be emloyed to squeeze directions into a float32.
 
 ## Raytracing improvements
 
