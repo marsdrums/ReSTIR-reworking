@@ -128,7 +128,7 @@ sample get_sample_dir_col_for_env_jittered(int index, inout uint seed){
 
 sample get_environment_sample(in vec3 candidate_dir, inout uint seed, in float rou){
 	sample s;
-	s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, 0.0).rgb;
+	s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, rou*8).rgb;
 	//s.col = textureLod(environmentMap, (invV * vec4(candidate_dir, 0)).xyz, 0.0).rgb;
 	s.nor = candidate_dir;
 	//s.pos = s.nor;
@@ -286,17 +286,15 @@ vec3 get_specular_radiance(in sample this_s, in sample test_s){
 	float dist2 = dot(diff,diff);
 	float dist = sqrt(dist2);
 
-	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
-
   	vec3 L = diff / dist;
  	vec3 V = -this_s.view;
 	vec3 H = normalize(V + L); 
 
-	float NoV = clamp(dot(this_s.nor, V), 0.001, 1.0);
-	float NoL = clamp(dot(this_s.nor, L), 0.001, 1.0);
+	float NoV = clamp(dot(this_s.nor, V), 0.00001, 1.0);
+	float NoL = clamp(dot(this_s.nor, L), 0.00001, 1.0);
 
-	float NoH = clamp(dot(this_s.nor, H), 0.001, 1.0);
-	float HoV = clamp(dot(H, V), 0.001, 1.0);
+	float NoH = clamp(dot(this_s.nor, H), 0.00001, 1.0);
+	float HoV = clamp(dot(H, V), 0.00001, 1.0);
 
     float alpha_sqr = this_s.rou * this_s.rou;
 
@@ -322,6 +320,7 @@ vec3 get_specular_radiance(in sample this_s, in sample test_s){
    	//vec3 rp = (rp_a - nc2) / (rp_a + nc2); //ppolarized
 
    	//vec3 F = 0.5 * (rs + rp);
+	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
    	vec3 F = F_schlick(HoV, F0);
     
     //Estimator
@@ -365,8 +364,6 @@ vec3 get_radiance(in sample this_s, in sample test_s){
 
 vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 
-	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
-
   	vec3 L = test_s.nor;
  	vec3 V = -this_s.view;
 	vec3 H = normalize(V + L); 
@@ -378,6 +375,7 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
 	float HoV = clamp(dot(H, V), 0.001, 1.0);
 
     float alpha_sqr = this_s.rou * this_s.rou;
+    alpha_sqr *= alpha_sqr;
 
 //Masking function
 	float NoV_sqr = NoV*NoV;
@@ -401,6 +399,8 @@ vec3 get_radiance_for_env(in sample this_s, in sample test_s){
    	//vec3 rp = (rp_a - nc2) / (rp_a + nc2); //ppolarized
 
    	//vec3 F = 0.5 * (rs + rp);
+
+	vec3 F0 = mix(vec3(0.04), this_s.alb, vec3(this_s.met)); 
    	vec3 F = F_schlick(HoV, F0);
     
     //Estimator

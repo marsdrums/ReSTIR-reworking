@@ -1,0 +1,237 @@
+<jittershader name="default">
+	<description>Default Slab </description>
+	<param name="reservoirTex" type="int" default="0" filter="nearest" />
+	<param name="p_hatTex" type="int" default="1" filter="nearest" />
+	<param name="colTex" type="int" default="2" filter="nearest" />
+	<param name="norDepthTex" type="int" default="3" filter="nearest" />
+	<param name="velTex" type="int" default="4" filter="nearest" />
+	<param name="posTex" type="int" default="5" filter="nearest" />
+	<param name="albTex" type="int" default="6" filter="nearest" />
+	<param name="environmentMap" type="int" default="7" filter="nearest" />
+	<param name="roughMetalTex" type="int" default="8" filter="nearest" />
+	<param name="stbn_uvec2Tex" type="int" default="9" flter="nearest" />
+	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="9" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+	<param name="texDim" type="vec2" state="TEXDIM0" />
+	<param name="mapSize" type="vec2" state="TEXDIM7" />
+	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
+	<param name="farClip" type="float" state="FAR_CLIP" />
+
+	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
+	<param name="MV" type="mat4" state="MODELVIEW_MATRIX" />
+	<param name="invV" type="mat4" state="VIEW_MATRIX" transform="INVERSE" />
+	<param name="V" type="mat4" state="VIEW_MATRIX" />
+	<param name="VP" type="mat4" state="VIEW_PROJECTION_MATRIX" transform="INVERSE" />
+	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
+	<param name="projmat" type="mat4" state="CAM_PROJECTION_MATRIX" />
+	<param name="pos" type="vec3" state="POSITION" />
+	<param name="uv" type="vec2" state="TEXCOORD" />
+	<param name="frame" type="int" state="FRAME" />
+	<param name="farCorner" type="vec3" state="FAR_CORNER" />
+	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+	<param name="radius" type="float" default="1.0" />
+	<param name="num_samples" type="int" default="8" />
+	<language name="glsl" version="1.5">
+		<bind param="colTex" program="fp" />
+		<bind param="norDepthTex" program="fp" />
+		<bind param="velTex" program="fp" />
+		<bind param="texDim" program="fp" />
+		<bind param="mapSize" program="fp" />
+		<bind param="posTex" program="fp" />
+		<bind param="reservoirTex" program="fp" />
+		<bind param="p_hatTex" program="fp" />
+		<bind param="albTex" program="fp" />
+		<bind param="environmentMap" program="fp" />
+		<bind param="roughMetalTex" program="fp" />
+		<bind param="stbn_uvec2Tex" program="fp" />
+		<bind param="prevMVP" program="fp" />
+		<bind param="farClip" program="fp" />
+
+		<bind param="MVP" program="vp" />
+		<bind param="MVP" program="fp" />
+		<bind param="MV" program="fp" />
+		<bind param="invV" program="fp" />
+		<bind param="V" program="fp" />
+		<bind param="VP" program="fp" />
+		<bind param="projmat" program="fp" />
+		<bind param="textureMatrix0" program="vp" />
+		<bind param="textureMatrix0" program="fp" />
+		<bind param="pos" program="vp" />
+		<bind param="uv" program="vp" />
+		<bind param="frame" program="fp" />
+		<bind param="farCorner" program="vp" />
+		<bind param="eye" program="fp" />
+		<bind param="radius" program="fp" />
+		<bind param="num_samples" program="fp" />
+
+		<include source="mm_restir.constants.glsl" program="fp" />
+		<include source="c74.noise.funcs.glsl" program="fp" />
+		<include source="mm_restir.structures.spatial.glsl" program="fp" />
+		<include source="mm_restir.common.glsl" program="fp" />
+
+<program name="vp" type="vertex"  >
+<![CDATA[
+#version 330 core
+
+in vec3 pos;
+in vec2 uv;
+
+out jit_PerVertex {
+	smooth vec2 uv;
+	smooth vec3 dir;
+	flat vec4 plane_near;
+	flat vec4 plane_far;
+	flat vec4 plane_left;
+	flat vec4 plane_right;
+	flat vec4 plane_top;
+	flat vec4 plane_bottom;
+} jit_out;
+
+uniform mat4 MVP;
+uniform mat4 textureMatrix0;
+uniform vec3 farCorner;
+
+void main(void) {
+	gl_Position = MVP*vec4(pos, 1.);
+	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
+	jit_out.uv = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+}
+]]>
+</program>
+<program name="fp" type="fragment"  >
+<![CDATA[
+#version 330 core
+
+layout (location = 0) out vec4 outReservoir;
+layout (location = 1) out vec4 outBestWpos;
+//layout (location = 2) out vec4 outHitPos;
+
+uint get_rng_seed(){
+	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112 + num_samples);
+}
+
+sample get_sample(int index){
+
+	sample s;
+	vec2 uv = index2uv(index);
+	ivec2 iuv = ivec2(uv);
+	vec4 lookup0 = texelFetch(colTex, iuv);
+	vec4 lookup1 = texelFetch(norDepthTex, iuv);
+	//vec4 lookup2 = texelFetch(velTex, iuv);
+	vec4 lookup3 = texelFetch(posTex, iuv);
+	vec4 lookup4 = texelFetch(albTex, iuv);
+	vec2 lookup5 = texelFetch(roughMetalTex, iuv).xy;
+	s.col = lookup0.rgb;
+	s.nor = lookup1.xyz;
+	//s.vel = lookup2.xy;
+	s.pos = lookup3.xyz;
+	s.depth = lookup1.w;
+	s.index = index;
+	s.uv = uv;
+	s.alb = lookup4.rgb;
+	s.id = lookup4.w;
+	s.view = normalize(s.pos);
+	s.ref = reflect(s.view, s.nor);
+	s.rou = max(0.00001, lookup5.x);//clamp(lookup5.x, 0.0, 0.3);
+	s.met = lookup5.y;
+	return s;
+}
+
+void main(void) {
+
+	uint seed = get_rng_seed();
+	sample this_s = get_sample(uv2index(jit_in.uv));
+	if(this_s.depth >= 1){
+		//outColor = vec4(0.0);
+		return;
+	}
+
+	sample test_s;
+
+	vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
+	vec4 p_hat_best_dir = texelFetch(p_hatTex, ivec2(jit_in.uv));
+	float p_hat = p_hat_best_dir.x;
+	vec3 best_dir = p_hat_best_dir.yzw;
+	vec3 candidate_dir;
+
+	//SPATIAL REUSE_____________________________________________________________________________
+
+	vec4 spatial_reservoir = vec4(0);
+
+	// combine current reservoir
+	spatial_reservoir = updateReservoir(spatial_reservoir, reservoir.y, p_hat * reservoir.w * reservoir.z, reservoir.z, seed, best_dir, best_dir);
+
+	vec4 neighbor_reservoir;
+
+	float hitDist = 11;
+	if(reservoir.y > 0){
+		test_s = get_sample_pos_col(int(reservoir.y));	
+		hitDist = length(this_s.pos - test_s.pos)+0.05;	
+	}
+
+	float randAngle = RandomFloat01(seed)*M_TAU;
+	vec2 randomDir = vec2(cos(randAngle), sin(randAngle));
+	vec2 spiralDir[4] = vec2[] (randomDir,
+								randomDir.yx,
+								-randomDir,
+								-randomDir.yx);
+
+	float spiralRadius = mix(0, 5, this_s.rou)*radius;
+
+	for(int i = 0 ; i < num_samples; i++){
+
+		vec2 sample_uv = jit_in.uv + spiralDir[i%4]*float(i+1)*spiralRadius*hitDist;
+
+		if(!valid_uv(sample_uv)) continue;
+
+		ivec2 neiUV = ivec2(sample_uv);
+
+		vec4 candidateNor_depth = texelFetch(norDepthTex, neiUV);		
+
+		if(candidateNor_depth.w >= 1.0) continue;
+
+		vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
+
+		if(	dot(this_s.nor, candidateNor_depth.xyz) < 0.96 || length(this_s.pos - candidatePos) > 0.2 ) continue;
+
+		neighbor_reservoir = texelFetch(reservoirTex, neiUV);
+		neighbor_reservoir.z = min(reservoir.z, neighbor_reservoir.z);
+
+		if(neighbor_reservoir.y >= 0){
+
+			test_s = get_sample_pos_col(int(neighbor_reservoir.y));
+			p_hat = length( get_specular_radiance(this_s, test_s) );
+
+		} else {
+
+			candidate_dir = texelFetch(p_hatTex, neiUV).yzw;
+			test_s = get_environment_sample(candidate_dir, seed, this_s.rou);
+			p_hat = length( get_radiance_for_env(this_s, test_s) );
+		}
+
+		spatial_reservoir = updateReservoir(spatial_reservoir, neighbor_reservoir.y, p_hat * neighbor_reservoir.w * neighbor_reservoir.z, neighbor_reservoir.z, seed, candidate_dir, best_dir);
+
+	}		
+
+	if(spatial_reservoir.y >= 0){
+		test_s = get_sample_pos_col(int(spatial_reservoir.y));
+		p_hat = length( get_specular_radiance(this_s, test_s) );
+
+	} else {
+		test_s = get_environment_sample(best_dir, seed, this_s.rou);
+		p_hat = length( get_radiance_for_env(this_s, test_s) );
+	}
+
+	spatial_reservoir.w = p_hat > 0 ? (1 / max(p_hat, 0.0001)) * (spatial_reservoir.x / max(spatial_reservoir.z, 0.0001)) : 0.0;
+	//spatial_reservoir.w = clamp(spatial_reservoir.w,0.001, 1.);	
+	reservoir = spatial_reservoir;
+
+	//______________________________________________________________________________________________________________________________________________
+
+	outReservoir = reservoir;
+	outBestWpos = vec4(p_hat, best_dir);
+
+}
+]]>
+</program>
+</language>
+</jittershader>

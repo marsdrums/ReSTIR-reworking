@@ -28,8 +28,8 @@
 	<param name="frame" type="int" state="FRAME" />
 	<param name="farCorner" type="vec3" state="FAR_CORNER" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
-	<param name="radius" type="float" default="0.001" />
-	<param name="num_samples" type="int" default="8" />
+	<param name="radius" type="float" default="0.2" />
+	<param name="num_samples" type="int" default="5" />
 	<language name="glsl" version="1.5">
 		<bind param="colTex" program="fp" />
 		<bind param="norDepthTex" program="fp" />
@@ -78,6 +78,12 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
+	flat vec4 plane_near;
+	flat vec4 plane_far;
+	flat vec4 plane_left;
+	flat vec4 plane_right;
+	flat vec4 plane_top;
+	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -100,7 +106,7 @@ layout (location = 1) out vec4 outBestWpos;
 //layout (location = 2) out vec4 outHitPos;
 
 uint get_rng_seed(){
-	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112 + num_samples);
+	return uint(jit_in.uv.x*27731) + uint(jit_in.uv.y*44922) + uint(frame*1114 + num_samples);
 }
 
 sample get_sample(int index){
@@ -119,8 +125,10 @@ sample get_sample(int index){
 	//s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
+	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
+	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
 	s.rou = max(0.00001, lookup5.x);//clamp(lookup5.x, 0.0, 0.3);
@@ -132,7 +140,7 @@ void main(void) {
 
 	uint seed = get_rng_seed();
 	sample this_s = get_sample(uv2index(jit_in.uv));
-	if(this_s.depth == 1){
+	if(this_s.depth >= 1){
 		//outColor = vec4(0.0);
 		return;
 	}
@@ -160,17 +168,10 @@ void main(void) {
 
 	vec4 neighbor_reservoir;
 
-	//float a = 1./(1. + this_s.nor.z);
-	//float b = -this_s.nor.x*this_s.nor.y*a;
-	//vec3 f = vec3(1. - this_s.nor.x*this_s.nor.x*a, b, -this_s.nor.x);
-	//vec3 r = vec3(b, 1. - this_s.nor.y*this_s.nor.y*a , -this_s.nor.y);
-//
-	//mat3 TBN = mat3(r, f, this_s.nor);
-
 	ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
 	float index = float(frame)*float(num_samples);
 
-	float hitDist = 100;
+	float hitDist = 11;
 	if(reservoir.y > 0){
 		test_s = get_sample_pos_col(int(reservoir.y));	
 		hitDist = length(this_s.pos - test_s.pos)+0.05;	
@@ -183,37 +184,23 @@ void main(void) {
 								-randomDir,
 								-randomDir.yx);
 
-	float spiralRadius = mix(1.4142135624, 5, this_s.rou)*radius;
+	float spiralRadius = mix(0, 5, this_s.rou)*radius;
 
 	for(int i = 0 ; i < num_samples; i++){
 
-		//float tile_selector = mod(index + float(i), 64.0);
-		//ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
-		//vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
-		//vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*this_s.rou, 0)*radius;
-
-		//vec3 lobe = normalize(this_s.ref + randomUnitVector3(seed)*this_s.rou) * RandomFloat01(seed)*radius*this_s.rou*hitDist;
-		//lobe += this_s.pos;
-		//vec4 sample_proj = projmat * (vec4(lobe, 1));
-		//sample_proj.xy /= sample_proj.w;
-
-		//vec2 sample_uv = vec2(textureMatrix0*vec4(sample_proj.xy*0.5 + 0.5, 0., 1.));
 		vec2 sample_uv = jit_in.uv + spiralDir[i%4]*float(i+1)*spiralRadius*hitDist;
 
 		if(!valid_uv(sample_uv)) continue;
 
 		ivec2 neiUV = ivec2(sample_uv);
-		//ivec2 neiUV = ivec2(jit_in.uv + disk.xy*100);
 
 		vec4 candidateNor_depth = texelFetch(norDepthTex, neiUV);		
 
-		if(candidateNor_depth.w == 1.0 || candidateNor_depth.w == 0.0) continue;
+		if(candidateNor_depth.w >= 1.0) continue;
 
 		vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
 
-		if(	dot(this_s.nor, candidateNor_depth.xyz) < 0.99 
-			 ||  length(this_s.pos - candidatePos) > 0.2 ) continue;
-
+		if(	dot(this_s.nor, candidateNor_depth.xyz) < 0.96 || length(this_s.pos - candidatePos) > 0.2 ) continue;
 
 		neighbor_reservoir = texelFetch(reservoirTex, neiUV);
 		neighbor_reservoir.z = min(reservoir.z, neighbor_reservoir.z);
@@ -247,10 +234,7 @@ void main(void) {
 	//spatial_reservoir.w = clamp(spatial_reservoir.w,0.001, 1.);	
 	reservoir = spatial_reservoir;
 
-	
-
 	//______________________________________________________________________________________________________________________________________________
-
 
 	if(reservoir.y >= 0){
 
@@ -264,7 +248,7 @@ void main(void) {
 			//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		//}	
 
-		outBestWpos = reservoir.y >= 0 ? vec4( (invV * vec4(test_s.pos, 1)).xyz, 1.0) : vec4(test_s.uv, 0, 1);
+		outBestWpos = reservoir.y >= 0 ? vec4( (invV * vec4(test_s.pos, 1)).xyz, this_s.id) : vec4(test_s.uv, 0, 1);
 
 	} else {
 		test_s = get_environment_sample(best_dir, seed, this_s.rou);
@@ -282,8 +266,6 @@ void main(void) {
 
 	outReservoir = reservoir;
 	//outHitPos = vec4(test_s.pos,1);
-
-
 }
 ]]>
 </program>

@@ -110,13 +110,9 @@ vec2 index2uv(in int i){
 	return vec2( mod( float(i), texDim.x ), floor( float(i) / texDim.x ) )+0.5;
 }
 
-vec2 index2uv_for_env(in int i){
-	return vec2( mod( float(-i), mapSize.x ), floor( float(-i) / mapSize.x ) )+0.5;
-}
-
 float luminance(vec3 x){
-	return length(x);
-	//return dot(x, vec3(0.299, 0.587, 0.114));
+	//return length(x);
+	return dot(x, vec3(0.299, 0.587, 0.114));
 }
 
 sample get_sample(int index){

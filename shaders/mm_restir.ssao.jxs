@@ -90,7 +90,7 @@ void main()
 
 	
 	// accumulated occlusion factor
-	#define NUM_BASE_SAMPLES 5	
+	#define NUM_BASE_SAMPLES 6	
 	float occ = 0;
 	float weight = amnt / NUM_BASE_SAMPLES;
 	for (int i = 0; i < NUM_BASE_SAMPLES; ++i) {

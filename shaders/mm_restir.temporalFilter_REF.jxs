@@ -4,6 +4,7 @@
 	<param name="velTex" type="int" default="1" />
 	<param name="accumTex" type="int" default="2" />
 	<param name="velTexRef" type="int" default="3" />
+	<param name="norDepthTex" type="int" default="4" />
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
 	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
@@ -15,6 +16,7 @@
 		<bind param="velTex" program="fp" />
 		<bind param="accumTex" program="fp" />
 		<bind param="velTexRef" program="fp" />
+		<bind param="norDepthTex" program="fp" />
 		<bind param="texDim" program="fp" />
 		<bind param="MVP" program="vp" />
 		<bind param="textureMatrix0" program="vp" />
@@ -45,7 +47,7 @@ void main(void) {
 
 <![CDATA[
 #version 330 core
-uniform sampler2DRect imgTex, velTex, accumTex, velTexRef;
+uniform sampler2DRect imgTex, velTex, accumTex, velTexRef, norDepthTex;
 uniform vec2 texDim;
 uniform float variance_clipping_gamma;
 

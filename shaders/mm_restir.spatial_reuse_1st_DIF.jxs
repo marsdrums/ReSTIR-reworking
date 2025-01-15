@@ -107,7 +107,7 @@ layout (location = 1) out vec4 outPhat;
 uniform int enable_spatial_1_DIF;
 
 uint get_rng_seed(){
-	return uint(jit_in.uv.x*188371) + uint(jit_in.uv.y*299147) + uint(frame*252521 + num_samples);
+	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112 + num_samples);
 }
 
 vec2 get_sample_uv(inout uint seed, in float rad, in int iteration){
@@ -122,8 +122,18 @@ int uv2index(in vec2 uv){
 	return int(uv.x + uv.y*texDim.x);
 }
 
+int uv2index_for_env(in vec2 uv){
+	//uv -= 0.5;
+	uv = floor(uv);
+	return -int(uv.x + uv.y*mapSize.x); //negate the index to distinguish it from viewport samples
+}
+
 vec2 index2uv(in int i){
 	return vec2( mod( float(i), texDim.x ), floor( float(i) / texDim.x ) )+0.5;
+}
+
+vec2 index2uv_for_env(in int i){
+	return vec2( mod( float(-i), mapSize.x ), floor( float(-i) / mapSize.x ) )+0.5;
 }
 
 float luminance(vec3 x){
@@ -146,8 +156,10 @@ sample get_sample(int index){
 	s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
+	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
+	s.id = lookup4.w;
 	return s;
 }
 
