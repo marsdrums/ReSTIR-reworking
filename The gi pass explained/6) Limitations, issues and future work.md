@@ -4,7 +4,7 @@ The "gi" pass is far from being perfect, but there should be room for improvemen
 
 # Known issues
 
-## Blackouts
+## Blackouts [FIXED!]
 
 ![](./images/blackout.png)
 
@@ -54,12 +54,12 @@ In practice, this issue results in faulty temporal reprojections which cause the
 
 In real-time sample-based rendering, TAA is useful not only for mitigating aliasing artifacts, but also for noise reduction. At the moment, enabling TAA after the "gi" pass produces visible color fluctuations. The reason for such artifacts should lie in the DEPTHPEEL target not being jittered - this produces depth values which are inconsistent with the rest of the rendered geometry, whch reflects in uncorrect ray tracing operations. Enabling projection matrix jittering for DEPTHPEEL should solve the issue.
 
-## Unalligned environment map
+## Unalligned environment map [FIXED!]
 
 It looks like the environment map shown in the background doesn't allign with reflection. 
 ![](./images/allignement_issue.png)
 
-## Diffuse - reflections order
+## Diffuse - reflections order [FIXED!]
 
 Currently, i'm rendering reflections first, and then diffuse. There's absoutely no point in doing that! I'll reverse the order so that reflection can computed on the current-frame diffuse computation. This requires splitting the compositing stage in two: first, add direct and indirect diffuse, then compute reflections, then composite all together.
 
