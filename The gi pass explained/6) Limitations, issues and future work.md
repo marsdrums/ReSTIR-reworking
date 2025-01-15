@@ -79,7 +79,7 @@ Memory issues could be partially reduced by better packing render targets. Curre
 
 ![](./images/current_render_targets.png)
 
-There are many unused channels in the G-buffer. By packing small bit depth data into larger bit depth container, we could remove two render targets, saving a total of 64 bits of memory per pixel:
+There are many unused channels in the G-buffer. By packing small bit depth data into larger bit depth containers, we could remove two render targets, saving a total of 64 bits of memory per pixel:
 
 ![](./images/packed_render_targets.png)
 
