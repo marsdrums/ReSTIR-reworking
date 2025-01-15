@@ -91,7 +91,7 @@ The Kajiya renderer uses compression to squeeze data into a small and tight G-bu
 
 ![](./images/packed_render_targets2.png)
 
-Here data is compressed into a 32-bit render target and a 16-bit (half-res) render target, for a total of 1,8mb per pixel, against the current 4mb per pixel.
+Here data is compressed into a 32-bit render target and a 16-bit (half-res) render target, saving 55% of memory bandwidth.
 Here some example code for data encoding/decoding:
 https://www.shadertoy.com/view/DtfBW8
 https://www.shadertoy.com/view/llfcRl
