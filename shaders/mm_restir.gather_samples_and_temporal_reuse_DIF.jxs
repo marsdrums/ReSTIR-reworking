@@ -83,12 +83,6 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -106,36 +100,6 @@ void main(void) {
 	gl_Position = MVP*vec4(pos, 1.);
 	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
 	jit_out.uv = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
-
-   // Compute frustum dimensions
-    float far_height 	= 2.0 * abs(farCorner.y);
-    float far_width 	= 2.0 * abs(farCorner.x);
-
-    float near_height 	= (nearClip / farClip) * far_height;
-    float near_width 	= (nearClip / farClip) * far_width;
-
-    // Compute frustum corners in view space
-    vec3 near_center 	= vec3(0.0, 0.0, -nearClip);
-    vec3 far_center 	= vec3(0.0, 0.0, -farClip);
-
-    vec3 far_top_right 		= farCorner;
-    vec3 far_top_left 		= vec3(-farCorner.x, farCorner.y, farCorner.z);
-    vec3 far_bottom_right 	= vec3(farCorner.x, -farCorner.y, farCorner.z);
-    vec3 far_bottom_left 	= vec3(-farCorner.x, -farCorner.y, farCorner.z);
-
-    vec3 near_top_right 	= vec3(near_width / 2.0, near_height / 2.0, -nearClip);
-    vec3 near_top_left 		= vec3(-near_width / 2.0, near_height / 2.0, -nearClip);
-    vec3 near_bottom_right 	= vec3(near_width / 2.0, -near_height / 2.0, -nearClip);
-    vec3 near_bottom_left 	= vec3(-near_width / 2.0, -near_height / 2.0, -nearClip);
-
-    // Define frustum planes
-    jit_out.plane_near 		= computePlane(near_top_left, near_top_right, near_bottom_right); // Near plane
-    jit_out.plane_far 		= computePlane(far_top_right, far_top_left, far_bottom_left); // Far plane
-    jit_out.plane_left 		= computePlane(near_top_left, far_top_left, far_bottom_left); // Left plane
-    jit_out.plane_right 	= computePlane(far_top_right, near_top_right, near_bottom_right); // Right plane
-    jit_out.plane_top 		= computePlane(near_top_left, near_top_right, far_top_right); // Top plane
-    jit_out.plane_bottom 	= computePlane(near_bottom_right, near_bottom_left, far_bottom_left); // Bottom plane
-
 }
 ]]>
 </program>
@@ -150,25 +114,28 @@ layout (location = 1) out vec4 outPhat;
 
 uniform int enable_temporal_DIF;
 
-float packvec3(in vec3 v) 
+vec2 msign( vec2 v )
 {
-	vec4 x = vec4(v, 1);
-	x = clamp(x, -1.0, 1.0) * 127.0;
-    uvec4 sig = uvec4(mix(vec4(0), vec4(1), greaterThanEqual(sign(x),vec4(0))));
-    uvec4 mag = uvec4(abs(x));
-    uvec4 r = sig << 7 | mag;
-	uint ui = r.x << 24 | r.y << 16 | r.z << 8 | r.w;
-	return uintBitsToFloat(ui);
+    return vec2( (v.x>=0.0) ? 1.0 : -1.0, 
+                 (v.y>=0.0) ? 1.0 : -1.0 );
 }
-vec3 unpackvec3(in float f) 
+float encode_octahedral_32( in vec3 nor )
 {
-	uint ui = floatBitsToUint(f);
-	uvec4 r = (uvec4(ui) >> uvec4(24, 16, 8, 0)) & uvec4(0xFF);
-    uvec4 sig = r >> 7;
-    uvec4 mag = r & uvec4(0x7F);
-    vec4 fsig = mix(vec4(-1), vec4(1), greaterThanEqual(sig,uvec4(1)));
-    vec4 fmag = vec4(mag) / 127.0;
-	return (fsig * fmag).xyz;
+    nor.xy /= ( abs( nor.x ) + abs( nor.y ) + abs( nor.z ) );
+    nor.xy  = (nor.z >= 0.0) ? nor.xy : (1.0-abs(nor.yx))*msign(nor.xy);
+    uvec2 d = uvec2(round(32767.5 + nor.xy*32767.5));  
+    return uintBitsToFloat(d.x|(d.y<<16u));
+}
+vec3 decode_octahedral_32( float f )
+{
+    uint data = floatBitsToUint(f);
+    uvec2 iv = uvec2( data, data>>16u ) & 65535u; 
+    vec2 v = vec2(iv)/32767.5 - 1.0;
+    vec3 nor = vec3(v, 1.0 - abs(v.x) - abs(v.y)); // Rune Stubbe's version,
+    float t = max(-nor.z,0.0);                     // much faster than original
+    nor.x += (nor.x>0.0)?-t:t;                     // implementation of this
+    nor.y += (nor.y>0.0)?-t:t;                     // technique
+    return normalize( nor );
 }
 
 uint get_rng_seed(){
@@ -187,7 +154,7 @@ vec2 get_sample_uv(inout uint seed, in int i){
 	return randUV;
 }
 
-vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
+vec3 get_canidate_dir(inout uint seed, in vec3 wNor, in int i){
 
 	//stratified sampling
 	float offset = float(i)/16;
@@ -199,9 +166,6 @@ vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
     float x = r * cos(a);
     float y = r * sin(a);
     vec3 rand_dir = vec3(x, y, z);
-
-	//compute world space normal *** precompute it outside the loop!
-	vec3 wNor = (invV * vec4(nor, 0)).xyz;
 
 	//force the vectors into the hemisphere
 	rand_dir = dot(rand_dir, wNor) > 0.0 ? rand_dir : -rand_dir;
@@ -273,10 +237,8 @@ sample get_sample(int index){
 	s.vel = texelFetch(velTex, iuv).rg;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
-	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
-	s.id = lookup4.w;
 	return s;
 }
 
@@ -352,18 +314,22 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	    if(background(test_s)) continue;
 
 		p_hat = luminance( get_radiance(this_s, test_s) );
-		p_hat /= 1 / M_TAU;//(texDim.x * texDim.y); //Divide by PDF
+		//p_hat /= 1 / M_TAU; //Divide by PDF
+		p_hat *= M_TAU;
 	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
 	}
 
+	//compute world space normal *** precompute it outside the loop!
+	vec3 wNor = (invV * vec4(this_s.nor, 0)).xyz;
 	//sample the environment map
 	for (int k = J; k > 0; k--)
 	{
-		candidate_dir = get_canidate_dir(seed, this_s.nor, k);
+		candidate_dir = get_canidate_dir(seed, wNor, k);
 	  	sample test_s = get_environment_sample(candidate_dir);
 
 		p_hat = luminance( get_radiance_for_env(this_s, test_s) );
-		p_hat /= 1 / M_TAU; //Divide by PDF
+		//p_hat /= 1 / M_TAU; //Divide by PDF
+		p_hat *= M_TAU;
 	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
 	}
 

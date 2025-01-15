@@ -122,18 +122,8 @@ int uv2index(in vec2 uv){
 	return int(uv.x + uv.y*texDim.x);
 }
 
-int uv2index_for_env(in vec2 uv){
-	//uv -= 0.5;
-	uv = floor(uv);
-	return -int(uv.x + uv.y*mapSize.x); //negate the index to distinguish it from viewport samples
-}
-
 vec2 index2uv(in int i){
 	return vec2( mod( float(i), texDim.x ), floor( float(i) / texDim.x ) )+0.5;
-}
-
-vec2 index2uv_for_env(in int i){
-	return vec2( mod( float(-i), mapSize.x ), floor( float(-i) / mapSize.x ) )+0.5;
 }
 
 float luminance(vec3 x){
@@ -156,10 +146,8 @@ sample get_sample(int index){
 	s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
-	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
-	s.id = lookup4.w;
 	return s;
 }
 
@@ -276,7 +264,7 @@ void main(void) {
 	   			vec2 proj_disk_uv = vec2(textureMatrix0 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
 				ivec2 neiUV = ivec2(proj_disk_uv + shiftBias);
 
-								
+
 				if(	neiUV.x < 0 || neiUV.y < 0 || 
 					neiUV.x >= texDim.x || neiUV.y >= texDim.y){
 					shiftBias -= vec2(neiUV) - jit_in.uv;
@@ -343,7 +331,7 @@ void main(void) {
 			//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		//}	
 
-		outBestWpos = vec4( (invV * vec4(test_s.pos, 1)).xyz, this_s.id);
+		outBestWpos = vec4( (invV * vec4(test_s.pos, 1)).xyz, 1.0);
 
 	} else {
 		//test_s = get_environment_sample(best_dir);

@@ -82,12 +82,6 @@ out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec2 uvFull;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -107,7 +101,6 @@ void main(void) {
 #version 330 core
 
 layout (location = 0) out vec4 outColor;
-layout (location = 1) out vec4 outTest;
 
 uniform float spiralRadius_REF;
 uniform float setEnvDist;
@@ -138,10 +131,8 @@ sample get_sample_full_res(int index){
 	//s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
-	s.index = index;
-	s.uv = jit_in.uv;
+	//s.uv = jit_in.uv;
 	s.alb = lookup4.rgb;
-	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
 	s.rou = max(0.0,lookup5.x);

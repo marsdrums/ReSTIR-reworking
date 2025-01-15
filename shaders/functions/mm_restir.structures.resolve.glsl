@@ -2,12 +2,6 @@ in jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec2 uvFull;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_in;
 
 
@@ -24,11 +18,11 @@ struct sample{
 	vec3 nor;
 	vec3 pos;
 	float depth;
-	float index;
-	vec2 uv;
+	//float index;
+	//vec2 uv;
 //	vec2 vel;
 	vec3 alb;
-	float id;
+	//float id;
 	vec3 ref;
 	vec3 view;
 	float rou;

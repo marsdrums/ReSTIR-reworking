@@ -2,15 +2,15 @@
     <pass name="gi">
         <inputs>
             <input source="COLOR" type="float16" erase_color="0 0 0 1" />
-            <input source="NORMALS" type="float32" erase_color="0 0 0 1" />
+            <input source="NORMALS" type="float16" erase_color="0 0 0 1" />
             <input source="VELOCITY" type="float16" />
             <input source="ALBEDO" type="char" erase_color="0 0 0 1" />
             <input source="ROUGHMETAL" type="char" erase_color="0 0 0 1" />
-            <input source="DEPTHPEEL" type="float32" />
+            <input source="DEPTHPEEL" type="float16" />
             <input source="ENVIRONMENT" type="float16" />
         </inputs>
 
-        <subpass name="dummy_half" file="mm_through.jxs" inputs="1" dimscale="0.5 0.5" type="float32">
+        <subpass name="dummy_half" file="mm_through.jxs" inputs="1" dimscale="0.5 0.5" type="float16">
             <input source="COLOR" />
         </subpass>
 
@@ -24,7 +24,7 @@
             <input source="ALBEDO"/>
         </subpass>
 
-        <subpass name="NORMALS_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float32">
+        <subpass name="NORMALS_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float16">
             <input subpass="dummy_half" />
             <input source="NORMALS"/>
         </subpass>
@@ -67,13 +67,13 @@
             <input subpass="NORMALS_half"/>
         </subpass>
 
-        <subpass name="IMAGE" file="mm_restir.past_frame_reprojection.jxs" inputs="3" outputs="1" type="float32">
+        <subpass name="IMAGE" file="mm_restir.past_frame_reprojection.jxs" inputs="3" outputs="1" type="float16">
             <input source="COLOR"/>
             <input subpass="composite_fdbk" history="1" />
             <inout source="VELOCITY" />
         </subpass>
 
-        <subpass name="IMAGE_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float32">
+        <subpass name="IMAGE_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float16">
             <input subpass="dummy_half" />
             <input subpass="IMAGE" />
         </subpass>
@@ -113,7 +113,7 @@
         </subpass>
 
 
-        <subpass name="REF_gather_temporal" file="mm_restir.gather_samples_and_temporal_reuse_REF.jxs" inputs="10" outputs="3" >
+        <subpass name="REF_gather_temporal" file="mm_restir.gather_samples_and_temporal_reuse_REF.jxs" inputs="10" outputs="2" >
             <input subpass="IMAGE_half" />
             <input subpass="NORMALS_half" />
             <input subpass="VELOCITY_WEIGHT_half_inflated" />
@@ -136,7 +136,7 @@
         </subpass>
 
 
-        <subpass name="REF_spatial" file="mm_restir.spatial_reuse_REF.jxs" inputs="9" outputs="3" >
+        <subpass name="REF_spatial" file="mm_restir.spatial_reuse_REF.jxs" inputs="9" outputs="2" >
             <input subpass="clamp_reservoir_REF" output="0" />
             <input subpass="REF_gather_temporal" output="1" />
             <input subpass="IMAGE_half" />
@@ -181,8 +181,8 @@
             <input subpass="NORMALS_half" />
             <input subpass="DEPTHPEEL_half" />
             <input subpass="VIEWPOS_half" />
-            <input subpass="clamp_reservoir_2" history="1" output="0"/>                       
-            <input subpass="random_reservoir_permutation" history="1" output="1" /> 
+            <input subpass="clamp_reservoir_1" history="1" output="0"/>                       
+            <input subpass="DIF_spatial_2" history="1" output="1" /> 
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
             <input subpass="VELOCITY_WEIGHT_half" />
@@ -222,17 +222,7 @@
             <input subpass="DIF_spatial_2" />
         </subpass>
 
-        <subpass name="random_reservoir_permutation" file="mm_restir.reservoir_random_permutation.jxs" inputs="3" outputs="2" type="float32">
-            <input subpass="clamp_reservoir_1" />
-            <input subpass="DIF_spatial_2" output="1" />
-            <input subpass="NORMALS_half" />
-        </subpass>
-
-        <subpass name="clamp_reservoir_2" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32">
-            <input subpass="random_reservoir_permutation" />
-        </subpass>
-
-        <subpass name="DIF_resolve" file="mm_restir.resolve_DIF.jxs" inputs="9" outputs="1" type="float32">
+        <subpass name="DIF_resolve" file="mm_restir.resolve_DIF.jxs" inputs="9" outputs="1" type="float16">
             <input subpass="IMAGE" />
             <input subpass="clamp_reservoir_1" />
             <input subpass="DIF_spatial_2" output="1" />
@@ -282,7 +272,7 @@
         </subpass>     
 
         <subpass name="dummyOUT" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
-            <input subpass="composite" output="0"/>
+            <input subpass="DIF_filtered" output="0"/>
         </subpass>
 
 

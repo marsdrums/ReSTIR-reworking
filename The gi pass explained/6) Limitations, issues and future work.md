@@ -91,7 +91,7 @@ The Kajiya renderer uses compression to squeeze data into a small and tight G-bu
 
 ![](./images/packed_render_targets2.png)
 
-Here data is compressed into a 32-bit render target and a 16-bit (half-res) render target, saving 55% of memory bandwidth.
+In this layout, data is compressed into a 32-bit render target and a 16-bit (half-res) render target, saving 55% of memory bandwidth over the initial configuration.
 Here some example code for data encoding/decoding:
 https://www.shadertoy.com/view/DtfBW8, 
 https://www.shadertoy.com/view/llfcRl
@@ -118,6 +118,8 @@ I'm performing some costly operations (such as sin() and cos()) pretty frequenct
 ## Minor and low level optimizations
 
 Here and there i'm performing unnecessary operations that can be removed. Also, the tracing algorithm could perform multiple texture fetches per iteration. Similarly, i should try turning conditionals to ternary assignemnts to see if performance improves.
+
+I'd also like to change the SSAO computation to something cheaper. I don't need great visual results, because the AO map is employed jusr as a guide to rule spatial reservoirs reuse's radius and filter severity. 
 
 # Look
 

@@ -78,12 +78,6 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -103,7 +97,7 @@ void main(void) {
 
 layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outBestWpos;
-layout (location = 2) out vec4 outHitPos;
+//layout (location = 2) out vec4 outHitPos;
 
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112 + num_samples);
@@ -125,10 +119,8 @@ sample get_sample(int index){
 	//s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
-	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
-	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
 	s.rou = max(0.00001, lookup5.x);//clamp(lookup5.x, 0.0, 0.3);
@@ -272,7 +264,7 @@ void main(void) {
 			//reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
 		//}	
 
-		outBestWpos = reservoir.y >= 0 ? vec4( (invV * vec4(test_s.pos, 1)).xyz, this_s.id) : vec4(test_s.uv, 0, 1);
+		outBestWpos = reservoir.y >= 0 ? vec4( (invV * vec4(test_s.pos, 1)).xyz, 1.0) : vec4(test_s.uv, 0, 1);
 
 	} else {
 		test_s = get_environment_sample(best_dir, seed, this_s.rou);
@@ -289,7 +281,7 @@ void main(void) {
 	}
 
 	outReservoir = reservoir;
-	outHitPos = vec4(test_s.pos,1);
+	//outHitPos = vec4(test_s.pos,1);
 
 
 }

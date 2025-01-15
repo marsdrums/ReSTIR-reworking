@@ -128,7 +128,7 @@ void main(void) {
 
 layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outPhat;
-layout (location = 2) out vec4 outTest;
+//layout (location = 2) out vec4 outTest;
 
 uint get_rng_seed(){
 	return uint(jit_in.uv.x*371783) + uint(jit_in.uv.y*288472) + uint(frame*377112);
@@ -150,14 +150,12 @@ sample get_sample(int index){
 	s.vel = lookup2.xy;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
-	s.index = index;
 	s.uv = uv;
 	s.alb = lookup4.rgb;
-	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
 	s.rou = max(0.001, lookup5.x);
-	s.met = lookup5.y;
+	//s.met = lookup5.y;
 	return s;
 }
 
@@ -482,7 +480,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	for (int i = 0; i < M; i++)
 	{
 		sample_uv_or_dir = get_sample_uv_or_dir(this_s, seed);
-		outTest = sample_uv_or_dir.w > 0.0 ? vec4(sample_uv_or_dir.xy,0,1) : vec4(0.0);
+		//outTest = sample_uv_or_dir.w > 0.0 ? vec4(sample_uv_or_dir.xy,0,1) : vec4(0.0);
 		
 		if(sample_uv_or_dir.x == 0) continue; //the random ray generator failed
 

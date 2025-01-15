@@ -262,37 +262,7 @@ void main(void) {
 			weight += this_weight;
 		}
 	}
-/*
-	vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
 
-	if(reservoir.y >= 0){ //if the sample is from the viewport
-
-		test_s = get_sample_pos_col(int(reservoir.y));
-
-		{
-			vec3 radiance = get_radiance(this_s, test_s);
-			float p_hat = luminance(radiance);
-			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-			radiance *= reservoir.w;
-			outColor.rgb += radiance;
-			weight += 1;
-		}		
-
-	} else {
-
-		vec3 best_dir = texelFetch(bestDirTex, ivec2(jit_in.uv)).xyz;
-		test_s = get_environment_sample(best_dir, seed);
-
-		{
-			vec3 radiance = get_radiance_for_env(this_s, test_s);
-			float p_hat = luminance(radiance);
-			reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
-			radiance *= reservoir.w;
-			outColor.rgb += radiance;
-			weight += 1;
-		}
-	}
-*/
 	outColor.rgb /= weight;
 	outColor.rgb /= this_s.alb;
 
