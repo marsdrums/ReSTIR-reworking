@@ -165,7 +165,7 @@ sample get_sample(int index){
 
 sample get_environment_sample(in vec3 candidate_dir){
 	sample s;
-	s.col = textureLod(environmentMap, candidate_dir, 1).rgb;
+	s.col = textureLod(environmentMap, candidate_dir, 1).rgb + 0.002;
 	s.nor = (V * vec4(candidate_dir, 0.0)).xyz;
 	//s.pos = s.nor;
 	return s;

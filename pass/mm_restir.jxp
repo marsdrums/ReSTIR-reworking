@@ -186,10 +186,9 @@
         </subpass>
 
 
-        <subpass name="composite_DIF" file="mm_restir.composite_DIF.jxs" inputs="4" outputs="1" type="float16">
+        <subpass name="composite_DIF" file="mm_restir.composite_DIF.jxs" inputs="3" outputs="1" type="float16">
             <input subpass="IMAGE"/>
             <input subpass="DIF_filtered" />
-            <input subpass="OCCLUSION" />
             <input source="ALBEDO"/>
         </subpass>
 
@@ -294,10 +293,9 @@
         </subpass>
 
 
-        <subpass name="composite" file="mm_restir.composite.jxs" inputs="7" outputs="2" type="float16">
+        <subpass name="composite" file="mm_restir.composite.jxs" inputs="6" outputs="2" type="float16">
             <input source="COLOR"/>
             <input subpass="DIF_filtered" />
-            <input subpass="OCCLUSION" />
             <input source="ALBEDO"/>
             <input subpass="REF_filtered" />
             <input source="ROUGHMETAL"/>

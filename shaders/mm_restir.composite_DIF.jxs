@@ -2,8 +2,7 @@
 	<description>Default Slab </description>
 	<param name="imgTex" type="int" default="0" />
 	<param name="indTex" type="int" default="1" />
-	<param name="occTex" type="int" default="2" />
-	<param name="albTex" type="int" default="3" />
+	<param name="albTex" type="int" default="2" />
 	//<param name="rouMetTex" type="int" default="4" />
 	<param name="modelViewProjectionMatrix" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
 	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
@@ -12,7 +11,6 @@
 	<language name="glsl" version="1.5">
 		<bind param="imgTex" program="fp" />
 		<bind param="indTex" program="fp" />
-		<bind param="occTex" program="fp" />
 		<bind param="albTex" program="fp" />
 		//<bind param="rouMetTex" program="fp" />
 		<bind param="modelViewProjectionMatrix" program="vp" />
@@ -48,19 +46,18 @@ in jit_PerVertex {
 
 layout (location = 0) out vec4 outColor;
 
-uniform sampler2DRect imgTex, indTex, occTex, albTex;//, rouMetTex;
+uniform sampler2DRect imgTex, indTex, albTex;//, rouMetTex;
 
 void main(void) {
 
 	ivec2 iuv = ivec2(jit_in.texcoord);
 	vec3 img = texelFetch(imgTex, iuv).rgb;
 	vec3 ind = texelFetch(indTex, iuv).rgb;
-	float occ = texelFetch(occTex, iuv).r;
 	vec3 alb = texelFetch(albTex, iuv).rgb;
 	//vec2 rouMet = texelFetch(rouMetTex, iuv).xy;
 
 	vec3 res = img;
-	res += alb*occ*0.005; //add a touch of uniform ambient light
+	//res += alb*occ*0.005; //add a touch of uniform ambient light
 	ind *= alb; //modulate indirect by albedo
 	res += ind; //add indirect
 
