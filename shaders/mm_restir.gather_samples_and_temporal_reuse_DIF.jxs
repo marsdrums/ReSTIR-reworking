@@ -339,14 +339,14 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 		sample test_s = get_sample(int(reservoir.y));
 		p_hat = shadowRay(this_s, test_s, seed) ? luminance( get_radiance(this_s, test_s) ) : 0.0;
-		reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
 		return reservoir;
 
 	} else { //if it's a sample from the environment map
 
 		sample test_s = get_environment_sample(best_dir);
 		p_hat = shadowRayForEnv(this_s, test_s) ? luminance( get_radiance_for_env(this_s, test_s) ) : 0.0;
-		reservoir.w = p_hat > 0.0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+		reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
 		return reservoir;
 	}
 }
@@ -433,8 +433,7 @@ void main(void) {
 				p_hat = luminance( get_radiance_for_env(this_s, test_s) );
 					
 			}
-			
-			temporal_reservoir.w = (1 / max(p_hat, 0.0001)) * (temporal_reservoir.x / max(temporal_reservoir.z, 0.0001));		
+			temporal_reservoir.w = p_hat > 0.0 ? temporal_reservoir.x / max(0.0001, p_hat*temporal_reservoir.z) : 0.0;
 			reservoir = temporal_reservoir;	
 		}
 		//___________________________________________________________________________________________________________________________________________________________

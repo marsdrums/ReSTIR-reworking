@@ -156,7 +156,7 @@ sample get_sample(int index){
 	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
-	s.rou = max(0.00001, lookup5.x);
+	s.rou = max(0.0, lookup5.x*lookup5.x);
 	s.met = lookup5.y;
 	return s;
 }
@@ -388,7 +388,7 @@ float rayFrustumIntersection(vec3 ro, vec3 rd){
 	return t;
 }
 
-vec2 raytrace(vec3 P, vec3 N, vec3 V, vec3 R){
+vec2 raytrace(vec3 P, vec3 N, vec3 V, vec3 R, inout uint seed){
 
 	//Compute reflections
 	vec3 endPos = P + R*rayFrustumIntersection(P, R);
@@ -399,7 +399,7 @@ vec2 raytrace(vec3 P, vec3 N, vec3 V, vec3 R){
 	vec2 fragDist = endFrag - jit_in.uv;
 	float numSteps = abs(fragDist.x) + abs(fragDist.y);
 
-	float coarse_step = 2;
+	float coarse_step = 10;
 	float step = coarse_step / numSteps;
 	vec2 fragStep = fragDist * step;
 
@@ -410,6 +410,10 @@ vec2 raytrace(vec3 P, vec3 N, vec3 V, vec3 R){
 
 	float expectedDepth;
 	vec4 sampledDepth;
+
+	float randomOffset = RandomFloat01(seed);
+	testFrag += fragStep*randomOffset;
+	divisor += divisorStep*randomOffset;
 
 	//corase search
 	for( float i = step; i < 1; i +=step ){
@@ -458,7 +462,7 @@ vec4 get_sample_uv_or_dir(in sample this_s, inout uint seed){
  	
  	if(!valid) return vec4(0.0);
 
- 	vec2 hitFrag = raytrace(this_s.pos, this_s.nor, this_s.view, pivot);
+ 	vec2 hitFrag = raytrace(this_s.pos, this_s.nor, this_s.view, pivot, seed);
 
  	return hitFrag.x >= 0 ? vec4(hitFrag, 0.0, reflectance) : vec4(pivot, -reflectance);
 }
@@ -519,7 +523,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 		p_hat = length( get_radiance_for_env(this_s, test_s) );
 	}
 
-	reservoir.w = p_hat > 0 ? (1/max(0.0001, p_hat)) * (reservoir.x / max(reservoir.z, 0.0001)) : 0.0;
+	reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
 	//reservoir.w = clamp(reservoir.w,0.001, 1.);
 	return reservoir;
 }

@@ -2,19 +2,15 @@
     <pass name="gi">
         <inputs>
             <input source="COLOR" type="float16" erase_color="0 0 0 1" />
-            <input source="NORMALS" type="float32" erase_color="0 0 0 1" />
+            <input source="NORMALS" type="float16" erase_color="0 0 0 1" />
             <input source="VELOCITY" type="float16" />
             <input source="ALBEDO" type="char" erase_color="0 0 0 1" />
             <input source="ROUGHMETAL" type="char" erase_color="0 0 0 1" />
-            <input source="DEPTHPEEL" type="float32" />
+            <input source="DEPTHPEEL" type="float16" />
             <input source="ENVIRONMENT" type="float16" />
         </inputs>
 
-        <subpass name="ROUGHMETAL_squared" file="mm_restir.square_roughness.jxs" inputs="1" type="float32">
-            <input source="ROUGHMETAL" />
-        </subpass>
-
-        <subpass name="dummy_half" file="mm_through.jxs" inputs="1" dimscale="0.5 0.5" type="float32">
+        <subpass name="dummy_half" file="mm_through.jxs" inputs="1" dimscale="0.5 0.5" type="float16">
             <input source="COLOR" />
         </subpass>
 
@@ -28,7 +24,7 @@
             <input source="ALBEDO"/>
         </subpass>
 
-        <subpass name="NORMALS_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float32">
+        <subpass name="NORMALS_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float16">
             <input subpass="dummy_half" />
             <input source="NORMALS"/>
         </subpass>
@@ -44,7 +40,7 @@
 
         <subpass name="ROUGHMETAL_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="char">
             <input subpass="dummy_half" />
-            <input subpass="ROUGHMETAL_squared" />
+            <input source="ROUGHMETAL" />
         </subpass>
 
         <subpass name="VELOCITY_inflated" file="mm_restir.inflate_velocity.jxs" inputs="2" outputs="1" type="float16">
@@ -195,7 +191,6 @@
             <input subpass="DIF_filtered" />
             <input subpass="OCCLUSION" />
             <input source="ALBEDO"/>
-            <input subpass="ROUGHMETAL_squared"/>
         </subpass>
 
         <subpass name="composite_DIF_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float32">
@@ -268,7 +263,7 @@
             <input subpass="VIEWPOS" />
             <input source="ALBEDO" />
             <input source="ENVIRONMENT" />
-            <input subpass="ROUGHMETAL_squared" />
+            <input source="ROUGHMETAL" />
         </subpass>
 
         <subpass name="REF_bilateral" file="jit.fx.cf.bilateral.jxs" inputs="1" outputs="1" type="float16">
@@ -305,7 +300,7 @@
             <input subpass="OCCLUSION" />
             <input source="ALBEDO"/>
             <input subpass="REF_filtered" />
-            <input source="ROUGHMETAL_squared"/>
+            <input source="ROUGHMETAL"/>
             <input subpass="background_fresnel" />
         </subpass>
 

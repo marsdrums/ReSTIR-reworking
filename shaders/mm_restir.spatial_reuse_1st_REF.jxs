@@ -131,7 +131,7 @@ sample get_sample(int index){
 	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
-	s.rou = max(0.00001, lookup5.x);//clamp(lookup5.x, 0.0, 0.3);
+	s.rou = max(0.0, lookup5.x*lookup5.x);//clamp(lookup5.x, 0.0, 0.3);
 	s.met = lookup5.y;
 	return s;
 }
@@ -222,7 +222,7 @@ void main(void) {
 		p_hat = length( get_radiance_for_env(this_s, test_s) );
 	}
 
-	spatial_reservoir.w = p_hat > 0 ? (1 / max(p_hat, 0.0001)) * (spatial_reservoir.x / max(spatial_reservoir.z, 0.0001)) : 0.0;
+	spatial_reservoir.w = p_hat > 0.0 ? spatial_reservoir.x / max(0.0001, p_hat*spatial_reservoir.z) : 0.0;
 	//spatial_reservoir.w = clamp(spatial_reservoir.w,0.001, 1.);	
 	reservoir = spatial_reservoir;
 

@@ -63,7 +63,7 @@ void main(void) {
 	float occ = texelFetch(occTex, iuv).r;
 	vec3 alb = texelFetch(albTex, iuv).rgb;
 	vec3 spe = texelFetch(speTex, iuv).rgb;
-	vec2 rouMet = texelFetch(rouMetTex, iuv).xy;
+	vec2 rouMet = texelFetch(rouMetTex, iuv).xy; 
 	vec4 lookup = texelFetch(bkgTex, iuv);
 	vec3 bkg = lookup.rgb;
 	float F = lookup.a;
