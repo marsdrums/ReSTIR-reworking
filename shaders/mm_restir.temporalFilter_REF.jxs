@@ -3,19 +3,17 @@
 	<param name="imgTex" type="int" default="0" />
 	<param name="velTex" type="int" default="1" />
 	<param name="accumTex" type="int" default="2" />
-	<param name="velTexRef" type="int" default="3" />
-	<param name="norDepthTex" type="int" default="4" />
+	<param name="norDepthTex" type="int" default="3" />
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="MVP" type="mat4" state="MODELVIEW_PROJECTION_MATRIX" />
 	<param name="textureMatrix0" type="mat4" state="TEXTURE0_MATRIX" />
 	<param name="pos" type="vec3" state="POSITION" />
 	<param name="uv" type="vec2" state="TEXCOORD" />
-	<param name="variance_clipping_gamma" type="float" default="2.0" />
+	<param name="variance_clipping_gamma" type="float" default="2.5" />
 	<language name="glsl" version="1.5">
 		<bind param="imgTex" program="fp" />
 		<bind param="velTex" program="fp" />
 		<bind param="accumTex" program="fp" />
-		<bind param="velTexRef" program="fp" />
 		<bind param="norDepthTex" program="fp" />
 		<bind param="texDim" program="fp" />
 		<bind param="MVP" program="vp" />
@@ -47,7 +45,7 @@ void main(void) {
 
 <![CDATA[
 #version 330 core
-uniform sampler2DRect imgTex, velTex, accumTex, velTexRef, norDepthTex;
+uniform sampler2DRect imgTex, velTex, accumTex, norDepthTex;
 uniform vec2 texDim;
 uniform float variance_clipping_gamma;
 
@@ -60,15 +58,10 @@ struct curr{
 	vec2 vel;
 	vec2 repUV;
 	float weight;
-	vec3 colRef;
-	vec2 velRef;
-	vec2 repUVRef;
-	float weightRef;
 };
 
 struct prev{
 	vec3 col;
-	vec3 colRef;
 };
 
 layout (location = 0) out vec4 outCol;
@@ -83,13 +76,6 @@ curr read_current_textures(){
 	c.vel = lookup.rg;
 	c.weight = lookup.b;
 	c.repUV = jit_in.uv - c.vel*texDim;
-
-	lookup = texture(velTexRef, jit_in.uv*0.5).rgb;
-	//vec3 lookup = texelFetch(velTex, iuv).rgb;
-	c.velRef = lookup.rg;
-	c.weightRef = lookup.b;
-	c.repUVRef = jit_in.uv - c.velRef*texDim;
-
 	return c;
 }
 
@@ -126,20 +112,7 @@ void main(void) {
 
 		prev p;
 		p.col = texture(accumTex, c.repUV).rgb;
-		p.colRef = texture(accumTex, c.repUVRef).rgb;
 		p.col = clamp(p.col, BoxMin, BoxMax);
-		p.colRef = clamp(p.colRef, BoxMin, BoxMax);
-
-		float distDiff = length(p.col - MU);
-		float distRef = length(p.colRef - MU);
-		float wDiff = max(0.01, ( 1 - distDiff*distDiff));
-		float wRef = max(0.01, ( 1 - distRef*distRef));
-
-		float totWeight = wDiff + wRef;
-
-		vec3 finalColor = p.col*wDiff + p.colRef*wRef;
-		finalColor /= totWeight;
-
 		//inalColor = clamp(finalColor, BoxMin, BoxMax);
 
 		outCol.rgb = mix( p.col, c.col, c.weight);

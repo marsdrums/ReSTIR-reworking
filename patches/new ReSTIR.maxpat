@@ -1307,7 +1307,7 @@
 
 							}
  ],
-						"originid" : "pat-10"
+						"originid" : "pat-8"
 					}
 ,
 					"patching_rect" : [ 50.499999642372131, 439.0, 49.0, 22.0 ],
@@ -2342,8 +2342,8 @@
 					"numinlets" : 1,
 					"numoutlets" : 2,
 					"outlettype" : [ "jit_geometry", "" ],
-					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 167.0, 22.0 ],
-					"text" : "jit.geom.xform @scale 5 0.1 5"
+					"patching_rect" : [ 33.199999511241913, 673.60001003742218, 181.0, 22.0 ],
+					"text" : "jit.geom.xform @scale 10 0.1 10"
 				}
 
 			}

@@ -83,27 +83,27 @@
         </subpass>
 
 
-        <subpass name="VELOCITY_ref" file="mm_restir.calc_velocity_for_reflections.jxs" inputs="5" outputs="1" type="float16">
-            <input subpass="DEPTHPEEL_half" />
-            <input subpass="NORMALS_half" />
-            <input subpass="VIEWPOS_half" />
-            <input subpass="VIEWPOS_half" history="1" />
-            <input subpass="VELOCITY_WEIGHT_half" />
-        </subpass>
-
-        <subpass name="VELOCITY_ref_inflated" file="mm_restir.inflate_velocity.jxs" inputs="2" outputs="1" type="float16">
-            <input subpass="VELOCITY_ref" />
-            <input subpass="NORMALS_half"/>
-        </subpass>
-
-        <subpass name="VELOCITY_ref_WEIGHT" file="mm_restir.get_velocity_and_weight.jxs" inputs="2" outputs="1" type="float16">
-            <input subpass="VELOCITY_ref_inflated"  />
-            <input subpass="VELOCITY_ref_WEIGHT_fdbk" history="1" output="0" />
-        </subpass>
-
-        <subpass name="VELOCITY_ref_WEIGHT_fdbk" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
-            <input subpass="VELOCITY_ref_WEIGHT" />
-        </subpass>
+<!--        <subpass name="VELOCITY_ref" file="mm_restir.calc_velocity_for_reflections.jxs" inputs="5" outputs="1" type="float16"> -->
+<!--            <input subpass="DEPTHPEEL_half" /> -->
+<!--            <input subpass="NORMALS_half" /> -->
+<!--            <input subpass="VIEWPOS_half" /> -->
+<!--            <input subpass="VIEWPOS_half" history="1" /> -->
+<!--            <input subpass="VELOCITY_WEIGHT_half" /> -->
+<!--        </subpass> -->
+<!-- -->
+<!--        <subpass name="VELOCITY_ref_inflated" file="mm_restir.inflate_velocity.jxs" inputs="2" outputs="1" type="float16"> -->
+<!--            <input subpass="VELOCITY_ref" /> -->
+<!--            <input subpass="NORMALS_half"/> -->
+<!--        </subpass> -->
+<!-- -->
+<!--        <subpass name="VELOCITY_ref_WEIGHT" file="mm_restir.get_velocity_and_weight.jxs" inputs="2" outputs="1" type="float16"> -->
+<!--            <input subpass="VELOCITY_ref_inflated"  /> -->
+<!--            <input subpass="VELOCITY_ref_WEIGHT_fdbk" history="1" output="0" /> -->
+<!--        </subpass> -->
+<!-- -->
+<!--        <subpass name="VELOCITY_ref_WEIGHT_fdbk" file="mm_through.jxs" inputs="1" outputs="1" type="float16"> -->
+<!--            <input subpass="VELOCITY_ref_WEIGHT" /> -->
+<!--        </subpass> -->
 
         <subpass name="OCCLUSION" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
             <input source="NORMALS"/>
@@ -275,11 +275,10 @@
         </subpass>  
 
         <bind name="variance_clipping_gamma" param="variance_clipping_gamma" type="float" default="2.0" />
-        <subpass name="REF_filtered" file="mm_restir.temporalFilter_REF.jxs" inputs="5" outputs="1" type="float16">
+        <subpass name="REF_filtered" file="mm_restir.temporalFilter_REF.jxs" inputs="4" outputs="1" type="float16">
             <input subpass="REF_resolve" output="0"/>
             <input subpass="VELOCITY_WEIGHT" />
             <input subpass="REF_filtered_fdbk" history="1" output="0"/>
-            <input subpass="VELOCITY_ref_WEIGHT" />
             <input source="NORMALS" />
         </subpass>
 

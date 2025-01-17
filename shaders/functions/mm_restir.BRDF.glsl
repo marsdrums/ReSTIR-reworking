@@ -164,10 +164,8 @@ vec3 SphericalCapBoundedWithPDFRatio(vec2 u, vec3 wi, vec2 alpha, out float pdf_
     vec3 c = vec3(x, y, z);
     // compute halfway direction as standard normal
     vec3 wmStd = c + wiStd;
-    // warp back to the ellipsoid configuration
-    vec3 wm = normalize(vec3(wmStd.xy * alpha, wmStd.z));
-    // return final normal
-    return wm;
+    // warp back to the ellipsoid configuration and return final normal
+    return normalize(vec3(wmStd.xy * alpha, wmStd.z));
 }
 
 vec4 spherical_cap_new_vndf(in sample this_s)

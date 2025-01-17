@@ -73,22 +73,17 @@ void main()
 {
 	
 	vec4 norm_depth = texelFetch(tex_normals, ivec2(jit_in.texcoord_rect));
+
 	vec3 viewPos = texelFetch(viewPosTex, ivec2(jit_in.texcoord_rect)).xyz; //normalize(ray) * farDistance * depth;
 	vec3 viewNorm = norm_depth.xyz;
 	float depth = norm_depth.w;
-	//outTest = -vec4(viewPos.z, viewPos.z, viewPos.z, 1);
-//	float a = 1./(1. + viewNorm.z);
-//    float b = -viewNorm.x*viewNorm.y*a;
-//    vec3 f = vec3(1. - viewNorm.x*viewNorm.x*a, b, -viewNorm.x);
-//   	vec3 r = vec3(b, 1. - viewNorm.y*viewNorm.y*a , -viewNorm.y);
-//
-//   	mat3 TBN = mat3(r, f, viewNorm);
 
-  //vec3 right = normalize(cross(viewNorm, vec3(0,1,0)));
-  //vec3 front = normalize(cross(right, viewNorm));
-  //mat3 TBN = mat3(right, front, viewNorm);
+	//shit to avoid self-intersections
+	viewPos += viewNorm*0.01;
 
-	
+	//augment view norm to avoid shooting rays at exactly 90°
+	viewNorm *= 1.1;	
+
 	// accumulated occlusion factor
 	#define NUM_BASE_SAMPLES 2	
 	float occ = 0;
@@ -99,9 +94,6 @@ void main()
 		vec2 tile_uv = 128*vec2(mod(tile_select, 8), floor(tile_select/8));
 		vec4 rand = texelFetch(tex_rand, ivec2(mod(jit_in.texcoord_rect, vec2(128)) + tile_uv));
 		rand.xyz = rand.xyz*2 - 1;
-		//rand.xyz = normalize(viewNorm*0.1 + rand.xyz);
-		//if(rand.z < 0) rand.xyz *= -1;
-		//rand.xyz = TBN * rand.xyz;
 		rand.xyz = normalize(rand.xyz + viewNorm);
 
 		float sample_radius = rand.w * radius;
@@ -109,8 +101,6 @@ void main()
 		vec4 nuv = projmat * vec4(randPos, 1);
 		nuv.xy /= nuv.w;
 		if(nuv.x <= -1 || nuv.y <= -1 || nuv.x >= 1 || nuv.y >= 1){
-			//occ += 0;
-			//bent_nor += rand.xyz;
 			continue;
 		}
 
@@ -120,13 +110,10 @@ void main()
     if ( 	(sample_depth.r > randPos.z && randPos.z > sample_depth.g) || 
     			(sample_depth.b > randPos.z && randPos.z > sample_depth.a) ){
 				occ += weight;
-				//bent_nor += rand.xyz;
 		} 
 	}
 
-	occ = 1 - clamp(occ, 0.0, 1.0);
-	//bent_nor = normalize(bent_nor);
-	
+	occ = 1 - clamp(occ, 0.0, 1.0);	
 	outColor = vec4(occ);
 }
 

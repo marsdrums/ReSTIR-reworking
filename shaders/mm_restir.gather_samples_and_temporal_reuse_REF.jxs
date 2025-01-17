@@ -156,7 +156,7 @@ sample get_sample(int index){
 	s.id = lookup4.w;
 	s.view = normalize(s.pos);
 	s.ref = reflect(s.view, s.nor);
-	s.rou = max(0.001, lookup5.x);
+	s.rou = max(0.00001, lookup5.x);
 	s.met = lookup5.y;
 	return s;
 }

@@ -4,11 +4,15 @@ bool shadowRay(in sample this_s, in sample test_s, inout uint seed){
     float step = 1 / num_iterations;
     float start = step * (1 + RandomFloat01(seed) - 0.5);
 
+    float numerator = this_s.pos.z * test_s.pos.z;
+    float divisor_end = 1 / test_s.pos.z;
+    float divisor_start = 1 / this_s.pos.z;
+
     for(float i = start; i < 1; i += step){ //make a better tracing
 
         vec2 test_uv = mix(this_s.uv, test_s.uv, i);
 
-        float expected_depth = (this_s.pos.z * test_s.pos.z) / mix(test_s.pos.z, this_s.pos.z, i);
+        float expected_depth = numerator * mix(divisor_end, divisor_start, i);
 
         vec4 sampled_depth = texture(depthsTex, test_uv);
 

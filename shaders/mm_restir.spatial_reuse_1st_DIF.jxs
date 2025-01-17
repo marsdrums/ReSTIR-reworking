@@ -223,10 +223,11 @@ void main(void) {
 
 	uint seed = get_rng_seed();
 	sample this_s = get_sample(uv2index(jit_in.uv));
-	//if(this_s.depth == 1){
-	//	//outColor = vec4(0.0);
-	//	return;
-	//}
+	if(this_s.depth == 1){
+		outReservoir = vec4(0.0);
+		outPhat = vec4(0.0);
+		return;
+	}
 
 	sample test_s;
 
@@ -258,22 +259,23 @@ void main(void) {
 	   		ivec2 wrap_uv = ivec2( mod(jit_in.uv, 128) );
 	   		float index = float(frame)*float(num_samples);
 	   		float occ = texelFetch(occTex, ivec2(jit_in.uv)).r;
+	   		float radiusFactor = occ*occ*radius*0.03;
 
 	   		vec2 shiftBias = vec2(0,0);
 
 			for(int i = 0; i < num_samples; i++){
 
 				float tile_selector = mod(index + float(i), 64.0);
-				ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector/8) )*128;
+				ivec2 offset_uv = wrap_uv + ivec2( mod(tile_selector, 8.0), floor(tile_selector*0.125) )*128;
 				vec4 lookup = texelFetch(stbn_uvec2Tex, offset_uv);
-				vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radius*0.03*occ*occ, 0);
+				vec3 disk = vec3((lookup.xy*2 - vec2(1.0))*lookup.w*radiusFactor, 0);
 
 	   			disk = TBN * disk;
 	   			disk += this_s.pos;
 	   			vec4 proj_disk = projmat * vec4(disk, 1);
 	   			proj_disk.xy /= proj_disk.w;
 	   			vec2 proj_disk_uv = vec2(textureMatrix0 * vec4((proj_disk.xy*0.5 +0.5), 1,1));
-				ivec2 neiUV = ivec2(proj_disk_uv + shiftBias);//ivec2(floor(get_sample_uv(seed, radius, i)) + 0.5);//this_s.uv + offset;
+				ivec2 neiUV = ivec2(proj_disk_uv + shiftBias);
 
 
 				if(	neiUV.x < 0 || neiUV.y < 0 || 
@@ -284,7 +286,7 @@ void main(void) {
 
 				vec4 candidateNorDepth = texelFetch(norDepthTex, neiUV);
 
-				if(candidateNorDepth.w == 0.0 || candidateNorDepth.w == 1.0) continue;
+				if(candidateNorDepth.w >= 1.0) continue;
 				
 				vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
 
@@ -301,7 +303,7 @@ void main(void) {
 				if(neighbor_reservoir.y >= 0){
 
 					test_s = get_sample_pos_col(int(neighbor_reservoir.y));
-					p_hat = luminance( get_radiance(this_s, test_s) );// * (this_s.depth + 1);
+					p_hat = luminance( get_radiance(this_s, test_s) );
 
 				} else {
 
