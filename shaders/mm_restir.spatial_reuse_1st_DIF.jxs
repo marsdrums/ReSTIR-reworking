@@ -8,10 +8,9 @@
 	<param name="posTex" type="int" default="5" filter="nearest" />
 	<param name="albTex" type="int" default="6" filter="nearest" />
 	<param name="environmentMap" type="int" default="7" filter="nearest" />
-	<param name="depthsTex" type="int" default="8" />
-	<param name="occTex" type="int" default="9" />
-	<param name="stbn_uvec2Tex" type="int" default="10" flter="nearest" />
-	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="10" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+	<param name="occTex" type="int" default="8" />
+	<param name="stbn_uvec2Tex" type="int" default="9" flter="nearest" />
+	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="9" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
 	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
@@ -44,7 +43,6 @@
 		<bind param="p_hatTex" program="fp" />
 		<bind param="albTex" program="fp" />
 		<bind param="environmentMap" program="fp" />
-		<bind param="depthsTex" program="fp" />
 		<bind param="occTex" program="fp" />
 		<bind param="stbn_uvec2Tex" program="fp" />
 		<bind param="prevMVP" program="fp" />
@@ -71,7 +69,6 @@
 
 		<include source="c74.noise.funcs.glsl" program="fp" />
 		<include source="mm_restir.structures.spatial.DIF.glsl" program="fp" />
-		<include source="mm_restir.raytrace.glsl" program="fp" />
 		<include source="mm_restir.constants.glsl" program="fp" />
 
 <program name="vp" type="vertex"  >

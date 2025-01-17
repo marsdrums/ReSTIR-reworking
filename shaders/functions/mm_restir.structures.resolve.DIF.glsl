@@ -4,7 +4,7 @@ in jit_PerVertex {
 	smooth vec3 dir;
 } jit_in;
 
-uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, depthsTex, posTex, albTex, occTex;
+uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, posTex, albTex, occTex;
 uniform samplerCube environmentMap;
 uniform int frame;
 uniform vec2 texDim, mapSize;

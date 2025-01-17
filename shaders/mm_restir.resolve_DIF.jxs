@@ -4,11 +4,10 @@
 	<param name="reservoirTex" type="int" default="1" filter="nearest" />
 	<param name="bestDirTex" type="int" default="2" filter="nearest" />
 	<param name="norDepthTex" type="int" default="3" filter="nearest" />
-	<param name="depthsTex" type="int" default="4" filter="nearest" />
-	<param name="posTex" type="int" default="5" filter="nearest" />
-	<param name="albTex" type="int" default="6" filter="nearest" />	
-	<param name="environmentMap" type="int" default="7" />
-	<param name="occTex" type="int" default="8" />
+	<param name="posTex" type="int" default="4" filter="nearest" />
+	<param name="albTex" type="int" default="5" filter="nearest" />	
+	<param name="environmentMap" type="int" default="6" />
+	<param name="occTex" type="int" default="7" />
 	//<param name="velTex" type="int" default="9" />
 	<param name="texDim" type="vec2" state="TEXDIM1" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
@@ -33,7 +32,6 @@
 		<bind param="reservoirTex" program="fp" />
 		<bind param="bestDirTex" program="fp" />
 		<bind param="norDepthTex" program="fp" />
-		<bind param="depthsTex" program="fp" />
 		<bind param="texDim" program="fp" />
 		<bind param="mapSize" program="fp" />
 		<bind param="posTex" program="fp" />
@@ -63,7 +61,6 @@
 		<include source="c74.noise.funcs.glsl" program="fp" />
 		<include source="mm_restir.structures.resolve.DIF.glsl" program="fp" />
 		<include source="mm_restir.constants.glsl" program="fp" />
-		<include source="mm_restir.raytrace.glsl" program="fp" />
 
 <program name="vp" type="vertex"  >
 <![CDATA[

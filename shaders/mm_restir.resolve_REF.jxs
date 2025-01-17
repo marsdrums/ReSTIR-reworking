@@ -169,7 +169,7 @@ sample get_sample_pos_col_full_res(int index, inout uint seed){
 
 	sample s;
 	vec2 uv = index2uv(index);
-	vec2 iuv = vec2(uv*2/* + uvJitter(seed)*/);
+	vec2 iuv = vec2(uv*2 + uvJitter(seed));
 	s.col = texture(colTex, iuv).rgb;
 	s.pos = texture(posTex, iuv).xyz;
 

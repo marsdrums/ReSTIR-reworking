@@ -106,7 +106,7 @@ void main()
 
 		vec2 nuv_rect = vec2(textureMatrix0 * vec4((nuv.xy*0.5 + 0.5), 0,1));
 
-		vec4 sample_depth = texelFetch(depthLayersTex, ivec2(nuv_rect));
+		vec4 sample_depth = texelFetch(depthLayersTex, ivec2(nuv_rect*0.5));
     if ( 	(sample_depth.r > randPos.z && randPos.z > sample_depth.g) || 
     			(sample_depth.b > randPos.z && randPos.z > sample_depth.a) ){
 				occ += weight;
