@@ -142,7 +142,6 @@ sample get_sample_pos_col(int index){
 
 	sample s;
 	vec2 uv = index2uv(index);
-	ivec2 iuv = ivec2(uv);
 	ivec2 iuvFull = ivec2(uv*2);
 	vec4 lookup0 = texelFetch(colTex, iuvFull);
 	vec4 lookup3 = texelFetch(posTex, iuvFull);
@@ -152,11 +151,10 @@ sample get_sample_pos_col(int index){
 	return s;
 }
 
-sample get_environment_sample(in vec3 candidate_dir, inout uint seed){
+sample get_environment_sample(in vec3 candidate_dir){
 	sample s;
 	s.col = textureLod(environmentMap, candidate_dir, 0).rgb;
 	s.nor = (V * vec4(candidate_dir, 0.0)).xyz;
-	//s.pos = s.nor;
 	return s;
 }
 
@@ -246,7 +244,7 @@ void main(void) {
 		} else {
 
 			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
-			test_s = get_environment_sample(best_dir, seed);
+			test_s = get_environment_sample(best_dir);
 
 			float this_weight = angle_diff * ( 1 - saturate(100*abs(this_s.depth - sample_depth))) * (1 - abs(sample_occ - occlusion) );
 			vec3 radiance = get_radiance_for_env(this_s, test_s);

@@ -157,16 +157,22 @@ sample get_sample_full_res(int index){
 	return s;
 }
 
-sample get_sample_pos_col_full_res(int index){
+vec2 uvJitter(inout uint seed){
+	return (vec2(RandomFloat01(seed), RandomFloat01(seed))-0.5)*30;
+}
+
+vec3 dirJitter(inout uint seed){
+	return (vec3(RandomFloat01(seed), RandomFloat01(seed), RandomFloat01(seed))-0.5)*0.01;
+}
+
+sample get_sample_pos_col_full_res(int index, inout uint seed){
 
 	sample s;
 	vec2 uv = index2uv(index);
-	ivec2 iuv = ivec2(uv*2);
-	vec4 lookup0 = texelFetch(colTex, iuv);
-	vec4 lookup3 = texelFetch(posTex, iuv);
+	vec2 iuv = vec2(uv*2 + uvJitter(seed));
+	s.col = texture(colTex, iuv).rgb;
+	s.pos = texture(posTex, iuv).xyz;
 
-	s.col = lookup0.rgb;
-	s.pos = lookup3.xyz;
 	return s;
 }
 
@@ -186,27 +192,18 @@ void main(void) {
 
 	outColor = vec4(0,0,0,1);
 
-	int NUM_SAMPLES = 4;//int(mix(1, 1, this_s.rou*this_s.rou));
+	int NUM_SAMPLES = 3;//int(mix(1, 1, this_s.rou*this_s.rou));
 	float weight = 0.0001;
 
 	vec3 invDir;
 	float hitDist = setEnvDist;
 	if(reservoir.y > 0){
-		test_s = get_sample_pos_col_full_res(int(reservoir.y));	
+		test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);	
 		vec3 sampleDiff = test_s.pos - this_s.pos;
 		hitDist = length(sampleDiff);	
 		invDir = -sampleDiff / hitDist;
 
 	}
-
-	//project ray dir in clip space
-	vec4 clipSpaceDir = projmat * vec4(this_s.pos + this_s.ref, 1.0);
-	clipSpaceDir.xy /= clipSpaceDir.w;
-	clipSpaceDir.xy = clipSpaceDir.xy*0.5 + 0.5;
-	clipSpaceDir.xy = (textureMatrix1 * vec4(clipSpaceDir.xy, 0, 1)).xy;
-	clipSpaceDir.xy = normalize(clipSpaceDir.xy - jit_in.uv);
-	clipSpaceDir.xy *= 1 - max(0.0, dot(this_s.nor, this_s.ref));
-
 
 	float randAngle = RandomFloat01(seed)*M_TAU;
 	vec2 randomDir = vec2(cos(randAngle), sin(randAngle));
@@ -219,15 +216,12 @@ void main(void) {
 	float radius = 1.0;
 
 	ivec2 prev_sample = ivec2(-1000, -1000);
+	float depthFactor = 2*farClip;
 
 	for(int i = 0; i < NUM_SAMPLES; i++){
 
 		vec2 sample_uv = jit_in.uv + spiralDir[i%4]*float(i)*spiralRadius;
-		//vec2 sample_uv = jit_in.uv; //+ (RandomFloat01(seed)*0.2 + 0.9)*(clipSpaceDir.xy*float(i)*spiralRadius*hitDist*this_s.rou + spiralDir[i%4]*hitDist*this_s.rou*float(i)*5);
-		//sample_uv += clipSpaceDir.xy*hitDist*this_s.rou*spiralRadius*(RandomFloat01(seed)-0.5);
-		//sample_uv += spiralDir[i%4]*hitDist*this_s.rou*float(i)*5;
-		
-		//float sampleDist = length(jit_in.uv - sample_uv)*0.1;
+
 		if(!valid_uv(sample_uv)) continue;
 
 		ivec2 randUV = ivec2(sample_uv);//ivec2(jit_in.uv + disk.xy);
@@ -245,9 +239,9 @@ void main(void) {
 		vec4 reservoir = texelFetch(reservoirTex, randUV);
 		if(reservoir.y >= 0){ //if the sample is from the viewport
 
-			test_s = get_sample_pos_col_full_res(int(reservoir.y));
+			test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);
 
-			float this_weight = angle_diff * ( 1 - saturate(2*abs(this_s.depth - sample_depth)*farClip) );
+			float this_weight = angle_diff * ( 1 - min(0.0, depthFactor * abs(this_s.depth - sample_depth)) );
 			//this_weight = clamp(this_weight,0,1);
 			vec3 radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
 			float p_hat = length(radiance);
@@ -263,7 +257,7 @@ void main(void) {
 			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
 			test_s = get_environment_sample(best_dir, seed, this_s.rou);
 
-			float this_weight = angle_diff * ( 1 - saturate(2*abs(this_s.depth - sample_depth)*farClip) );
+			float this_weight = angle_diff * ( 1 - min(0.0, depthFactor * abs(this_s.depth - sample_depth)) );
 			//this_weight = clamp(this_weight,0,1);
 			vec3 radiance = get_radiance_for_env(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
 			float p_hat = length(radiance);
@@ -290,7 +284,7 @@ void main(void) {
 
 		if(reservoir.y >= 0){ //if the sample is from the viewport
 
-			test_s = get_sample_pos_col_full_res(int(reservoir.y));
+			test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);
 
 			vec3 radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
 			float p_hat = length(radiance);

@@ -14,6 +14,39 @@
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
 				"box" : 				{
+					"attr" : "enable",
+					"id" : "obj-195",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 438.0, 103.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"filename" : "bloom.jxp",
+					"id" : "obj-194",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "jit_gl_texture", "", "" ],
+					"patching_rect" : [ 933.0, 490.0, 167.0, 22.0 ],
+					"text" : "jit.gl.pass @fxname bloom-hq",
+					"textfile" : 					{
+						"filename" : "bloom.jxp",
+						"flags" : 0,
+						"embed" : 0,
+						"autowatch" : 1
+					}
+
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"id" : "obj-193",
 					"maxclass" : "newobj",
 					"numinlets" : 2,
@@ -110,7 +143,7 @@
 						"originid" : "pat-6"
 					}
 ,
-					"patching_rect" : [ 191.0, 1189.0, 49.0, 22.0 ],
+					"patching_rect" : [ 197.0, 1199.0, 49.0, 22.0 ],
 					"text" : "jit.gl.pix"
 				}
 
@@ -2258,7 +2291,7 @@
 					"numinlets" : 8,
 					"numoutlets" : 2,
 					"outlettype" : [ "", "" ],
-					"patching_rect" : [ -111.500000357627869, 952.0, 422.0, 22.0 ],
+					"patching_rect" : [ -190.0, 970.0, 422.0, 22.0 ],
 					"text" : "jit.gl.pbr @gamma_correction 0 @shadow_eps 0.04 @mat_diffuse 0.5 0.5 0.5"
 				}
 
@@ -3307,6 +3340,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-87", 0 ],
 					"source" : [ "obj-193", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-35", 0 ],
+					"source" : [ "obj-195", 0 ]
 				}
 
 			}

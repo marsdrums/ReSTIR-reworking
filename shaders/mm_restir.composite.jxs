@@ -74,12 +74,12 @@ void main(void) {
 	res += ind; //add indirect
 
 	outFdbk.a = 1.0;
-	//outFdbk.rgb = mix(res, spe*0.3, rouMet.y);
 	outFdbk.rgb = mix(res, vec3(0.0), rouMet.y);
+	//outFdbk.rgb = mix(res, vec3(0.0), rouMet.y);
 
 	//vec3 	kS = vec3(F);			//k specular
-	vec3 	kD = vec3(1);//vec3(1.0) - kS;	//k diffuse
-			kD *= 1.0 - rouMet.y;	//nullify k diffuse if metallic
+	//vec3 	kD = vec3(1);//vec3(1.0) - kS;	//k diffuse
+	//		kD *= 1.0 - rouMet.y;	//nullify k diffuse if metallic
 
 
 	//res *= 1 - rouMet.y;
@@ -90,7 +90,7 @@ void main(void) {
 	//rouFallBack *= rouFallBack;
 	//res += mix(spe, ind, rouFallBack); //mix between specular and indirect diffuse
 
-	res *= kD;
+	res *= 1.0 - rouMet.y;
 	res += spe;
 
 	//uncorrect, but it looks better!
