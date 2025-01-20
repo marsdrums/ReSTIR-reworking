@@ -28,7 +28,7 @@
 	<param name="frame" type="int" state="FRAME" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
 
-	<param name="spiralRadius_REF" type="float" default="16" />
+	<param name="spiralRadius_REF" type="float" default="50" />
 	<param name="setEnvDist" type="float" default="11" />
 
 	<language name="glsl" version="1.5">
@@ -168,7 +168,17 @@ sample get_sample_pos_col_full_res(int index, inout uint seed){
 
 void main(void) {
 
-	sample this_s = get_sample_full_res(uv2index(floor(jit_in.uv)));
+	int randomIndex = int( floor(texelFetch(noiseTex, ivec2( mod(jit_in.uvFull, vec2(128))) ).w * 4) );
+
+	ivec2 offset[4] = ivec2[](	ivec2(+0, +0),
+								ivec2(+1, +0),
+								ivec2(+0, +1),
+								ivec2(+1, +1)
+								);
+	
+	vec2 disjointUV = ( jit_in.uvFull + offset[randomIndex] ) * 0.5;
+
+	sample this_s = get_sample_full_res(uv2index(floor(disjointUV)));
 	if(	texelFetch(norDepthTex, ivec2(jit_in.uvFull)).w > 0.9){
 		outColor = vec4(0.0);
 		return;
@@ -178,7 +188,7 @@ void main(void) {
 
 	sample test_s;
 
-	vec4 reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv));
+	vec4 reservoir = texelFetch(reservoirTex, ivec2(disjointUV));
 
 	outColor = vec4(0,0,0,1);
 
@@ -202,112 +212,74 @@ void main(void) {
 								-randomDir,
 								-randomDir.yx);
 
-	float spiralRadius = mix(0, 5, this_s.rou)*spiralRadius_REF;//*hitDist;
+	float spiralRadius = mix(0, spiralRadius_REF, this_s.rou);//*hitDist;
 	float radius = 1.0;
 
 	ivec2 prev_sample = ivec2(-1000, -1000);
-	float depthFactor = 2*farClip;
+	float depthFactor = 4*farClip;
+	vec3 radiance;
+	float this_weight, p_hat;
 
-	for(int i = 0; i < NUM_SAMPLES; i++){
+	for(int i = 1; i <= NUM_SAMPLES; i++){
 
-		vec2 sample_uv = jit_in.uv + spiralDir[i%4]*float(i)*spiralRadius;
+		vec2 sample_uv = disjointUV + spiralDir[i%4]*float(i)*spiralRadius;
 
 		if(!valid_uv(sample_uv)) continue;
 
 		ivec2 randUV = ivec2(sample_uv);//ivec2(jit_in.uv + disk.xy);
 
-		//if(randUV.x == prev_sample.x && randUV.y == prev_sample.y) continue;
-		//prev_sample = randUV;
-
 		ivec2 randUVfull = ivec2(sample_uv*2);//ivec2((jit_in.uv + disk.xy)*2);
 
 		vec4 sampleNorDepth = texelFetch(norDepthTex, randUVfull);
+		float angle_diff = dot(this_s.nor, sampleNorDepth.xyz);
 
-		if(sampleNorDepth.w >= 1) continue;
+		if(sampleNorDepth.w >= 1 || angle_diff <= 0.0 || angle_diff < 0.9) continue;
 		
-		float angle_diff = max(0.0, dot(this_s.nor, sampleNorDepth.xyz));
-
 		vec4 reservoir = texelFetch(reservoirTex, randUV);
+		
+		this_weight = angle_diff * max(0.0, ( 1 - depthFactor * abs(this_s.depth - sampleNorDepth.w) ));
+
 		if(reservoir.y >= 0){ //if the sample is from the viewport
 
 			test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);
-
-			float this_weight = angle_diff * ( 1 - min(0.0, depthFactor * abs(this_s.depth - sampleNorDepth.w)) );
-			//this_weight = clamp(this_weight,0,1);
-			vec3 radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
-			float p_hat = length(radiance);
-			//if(p_hat <= 0)continue;
-			reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-			//reservoir.w = clamp(reservoir.w,0.01, 1.);
-			radiance *= reservoir.w;
-			outColor.rgb += radiance*this_weight;
-			weight += this_weight;		
+			radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));	
 
 		} else {
 
 			vec3 best_dir = texelFetch(bestDirTex, randUV).xyz;
 			test_s = get_environment_sample(best_dir, seed, this_s.rou);
-
-			float this_weight = angle_diff * ( 1 - min(0.0, depthFactor * abs(this_s.depth - sampleNorDepth.w)) );
-			//this_weight = clamp(this_weight,0,1);
-			vec3 radiance = get_radiance_for_env(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
-			float p_hat = length(radiance);
-			//if(p_hat <= 0)continue;
-			reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-			//reservoir.w = clamp(reservoir.w,0.01, 1.);
-			radiance *= reservoir.w;
-			outColor.rgb += radiance*this_weight;
-			weight += this_weight;
+			radiance = get_radiance_for_env(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
 		}
+
+		float p_hat = length(radiance);
+		reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
+		radiance *= reservoir.w;
+		outColor.rgb += radiance*this_weight;
+		weight += this_weight;
 	}
 
 
-	//if(weight < 1){
+	reservoir = texelFetch(reservoirTex, ivec2(disjointUV) );
 
-		int randomIndex = int( texelFetch(noiseTex, ivec2( mod(jit_in.uvFull, vec2(64))) ).w * 4 );
-		ivec2 offset[4] = ivec2[](	ivec2(+0, +0),
-									ivec2(+1, +0),
-									ivec2(+0, +1),
-									ivec2(+1, +1)
-									);
+	if(reservoir.y >= 0){ //if the sample is from the viewport
 
-		reservoir = texelFetch(reservoirTex, ivec2(jit_in.uv) /*+ offset[randomIndex] */ );
+		test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);
+		radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
 
-		if(reservoir.y >= 0){ //if the sample is from the viewport
+	} else {
 
-			test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);
+		vec3 best_dir = texelFetch(bestDirTex, ivec2(disjointUV)).xyz;
+		test_s = get_environment_sample(best_dir, seed, this_s.rou);
+		radiance = get_radiance_for_env(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
+	}
 
-			vec3 radiance = get_specular_radiance(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
-			float p_hat = length(radiance);
-			reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-			radiance *= reservoir.w;
-			outColor.rgb += radiance;
-			weight += 1;
-				
+	p_hat = length(radiance);
+	reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
+	radiance *= reservoir.w;
+	outColor.rgb += radiance;
+	weight += 1;
 
-		} else {
-
-			//vec3 best_dir = texelFetch(bestDirTex, dither_uv).xyz;
-			vec3 best_dir = texelFetch(bestDirTex, ivec2(jit_in.uv)).xyz;
-			test_s = get_environment_sample(best_dir, seed, this_s.rou);
-
-			//bool is_visible = (i % 3) == 0 ? visible_env(this_s, test_s, seed) : true;
-
-			vec3 radiance = get_radiance_for_env(this_s, test_s);// * max(0.5, dot(test_s.nor, this_s.nor));
-			float p_hat = length(radiance);
-			//if(p_hat <= 0)continue;
-			reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-			radiance *= reservoir.w;
-			outColor.rgb += radiance;
-			weight += 1;
-
-		}
-
-	//}
-
-	//outTest = vec4(weight < 0.1 ? 1 : 0);
 	outColor.rgb /= weight;
-	//outColor = vec4(this_s.depth, this_s.depth, this_s.depth, 1.0); //figure out why background depth is black
 
 }
 ]]>
