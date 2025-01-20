@@ -74,15 +74,15 @@
         </subpass>
 
         <subpass name="OCCLUSION" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
-            <input source="NORMALS"/>
+            <input subpass="NORMALS_half"/>
             <input source="DEPTHPEEL" />
-            <input subpass="VIEWPOS" />
+            <input subpass="VIEWPOS_half" />
         </subpass>
 
-        <subpass name="OCCLUSION_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="char">
-            <input subpass="dummy_half" />
-            <input subpass="OCCLUSION" />
-        </subpass>
+<!--        <subpass name="OCCLUSION_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="char"> -->
+<!--            <input subpass="dummy_half" /> -->
+<!--            <input subpass="OCCLUSION" /> -->
+<!--        </subpass> -->
 
 <!-- ==================== DIFFUSE ========================= -->
 
@@ -110,7 +110,7 @@
             <input subpass="VIEWPOS_half" />
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
-            <input subpass="OCCLUSION_half" />
+            <input subpass="OCCLUSION" />
         </subpass>
 
         <subpass name="DIF_spatial_2" file="mm_restir.spatial_reuse_2nd_DIF.jxs" inputs="8" outputs="2" type="float32">
@@ -121,7 +121,7 @@
             <input subpass="VIEWPOS_half" />
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
-            <input subpass="OCCLUSION_half" />
+            <input subpass="OCCLUSION" />
         </subpass>
 
         <subpass name="clamp_reservoir_1" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32" >
@@ -268,7 +268,7 @@
         </subpass>     
 
         <subpass name="dummyOUT" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
-            <input subpass="REF_filtered" output="0"/>
+            <input subpass="composite" output="0"/>
         </subpass>
 
     </pass>

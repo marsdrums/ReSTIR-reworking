@@ -8,6 +8,8 @@
 	<param name="albTex" type="int" default="5" filter="nearest" />	
 	<param name="environmentMap" type="int" default="6" />
 	<param name="occTex" type="int" default="7" />
+	<param name="noiseTex" type="int" default="8" />
+	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="8" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
 	//<param name="velTex" type="int" default="9" />
 	<param name="texDim" type="vec2" state="TEXDIM1" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
@@ -37,6 +39,7 @@
 		<bind param="albTex" program="fp" />
 		<bind param="environmentMap" program="fp" />
 		<bind param="occTex" program="fp" />
+		<bind param="noiseTex" program="fp" />
 		//<bind param="velTex" program="fp" />
 		<bind param="prevMVP" program="fp" />
 		<bind param="farClip" program="fp" />
@@ -172,7 +175,18 @@ float saturate(in float x){ return clamp(x, 0, 1); }
 
 void main(void) {
 
-	sample this_s = get_sample(uv2index(floor(jit_in.uv)));
+	int randomIndex = int( floor(texelFetch(noiseTex, ivec2( mod(jit_in.uvFull, vec2(128))) ).w * 4) );
+
+	ivec2 offset[4] = ivec2[](	ivec2(+0, +0),
+								ivec2(+1, +0),
+								ivec2(+0, +1),
+								ivec2(+1, +1)
+								);
+	
+	vec2 disjointUV = ( jit_in.uvFull + offset[randomIndex] ) * 0.5;
+	disjointUV = clamp(disjointUV, vec2(0.0), texDim-1);
+
+	sample this_s = get_sample(uv2index(floor(disjointUV)));
 	if(this_s.depth == 1){
 		outColor = vec4(0.0);
 		return;
@@ -191,7 +205,7 @@ void main(void) {
 
 	outColor = vec4(0,0,0,1);
 
-	float occlusion = texelFetch(occTex, ivec2(jit_in.uv*2)).r;
+	float occlusion = texture(occTex, disjointUV).r;
 	float radius = mix(1.4142135624, 5, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
 	int NUM_SAMPLES = 4;
 	float weight = 0.0001;
@@ -201,7 +215,7 @@ void main(void) {
 		ivec2 randUV;
 		ivec2 randUVfull;
 
-		vec2 randUvSpiral = vec2(jit_in.uv + spiralDir[i%4]*float(i)*radius);
+		vec2 randUvSpiral = vec2(disjointUV + spiralDir[i%4]*float(i)*radius);
 		randUV = ivec2(randUvSpiral);
 		randUVfull = ivec2(randUvSpiral*2);
 
@@ -217,7 +231,7 @@ void main(void) {
 			
 		vec4 reservoir = texelFetch(reservoirTex, randUV);
 		float angle_diff = max(0.0, dot(this_s.nor, sampleNorDepth.xyz));
-		float sample_occ = texelFetch(occTex, randUVfull).r;
+		float sample_occ = texelFetch(occTex, randUV).r;
 
 		if(reservoir.y >= 0){ //if the sample is from the viewport
 

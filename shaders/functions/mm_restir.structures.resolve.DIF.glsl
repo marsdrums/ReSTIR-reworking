@@ -3,7 +3,7 @@ in jit_PerVertex {
 	smooth vec2 uvFull;
 } jit_in;
 
-uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, posTex, albTex, occTex;
+uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, posTex, albTex, occTex, noiseTex;
 uniform samplerCube environmentMap;
 uniform int frame;
 uniform vec2 texDim, mapSize;
