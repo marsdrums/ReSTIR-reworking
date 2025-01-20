@@ -136,7 +136,7 @@ uint get_rng_seed(){
 vec2 get_sample_uv(inout uint seed, in int i){
 
 	//stratified sampling
-	float d = 3;
+	float d = 2;
 	vec2 offset = vec2( mod(float(i),d), floor(float(i)/d) );
 
 	vec2 randUV = vec2(RandomFloat01(seed), RandomFloat01(seed)) / d;
@@ -148,11 +148,11 @@ vec2 get_sample_uv(inout uint seed, in int i){
 vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
 
 	//stratified sampling
-	float offset = float(i)/9;
+	float offset = float(i)/4;
 
 	//generate random unit vector 
 	float z = RandomFloat01(seed) * 2.0f - 1.0f;
-    float a = (RandomFloat01(seed)/9 + offset) * TWOPI;
+    float a = (RandomFloat01(seed)/4 + offset) * TWOPI;
     float r = sqrt(1.0f - z * z);
     float x = r * cos(a);
     float y = r * sin(a);
@@ -290,8 +290,8 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
     vec4 reservoir = vec4(0); //curr reservoir
 
-	const int M = 9;//num of from the view port
-	const int J = 9;//num of samples from the environment map
+	const int M = 4;//num of from the view port
+	const int J = 4;//num of samples from the environment map
 
 	int sample_index;
 	vec2 sample_uv;
@@ -358,7 +358,7 @@ void main(void) {
 
 	vec4 reservoir = gather_samples(this_s, seed, p_hat, best_dir);		
 
-	//if(enable_temporal_DIF == 1){
+	if(enable_temporal_DIF == 1){
 
 	//TEMPORAL REUSE//____________________________________________________________
 
@@ -426,7 +426,7 @@ void main(void) {
 			reservoir = temporal_reservoir;	
 		}
 		//___________________________________________________________________________________________________________________________________________________________
-	//}
+	}
 
 	
 	outReservoir = reservoir;

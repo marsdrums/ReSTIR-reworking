@@ -85,7 +85,7 @@ void main()
 	//viewNorm *= 1.5;	
 
 	// accumulated occlusion factor
-	#define NUM_BASE_SAMPLES 2	
+	#define NUM_BASE_SAMPLES 2
 	float occ = 0;
 	float weight = amnt / NUM_BASE_SAMPLES;
 	for (int i = 0; i < NUM_BASE_SAMPLES; ++i) {
