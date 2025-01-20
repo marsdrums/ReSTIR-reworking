@@ -180,13 +180,16 @@ vec4 spherical_cap_new_vndf(in sample this_s)
     vec3 V_tangent = -this_s.view * TBN;
     
     // -- Generate uniform random variables between 0 and 1
-    uint seed = uint(jit_in.uv.x*2993) + uint(jit_in.uv.y*92241) + uint(11119);
-    int randomOffset = int(RandomFloat01(seed) * 64);
+    uint staticSeed = uint(jit_in.uv.x*2993) + uint(jit_in.uv.y*92241) + uint(11119);
+    int randomOffset = int(RandomFloat01(staticSeed) * 64);
 
     //read the current sample in the Halton sequence
     int i = (frame + randomOffset) % 64; //*** move to vertex stage
 
-    vec2 u = halton[i];
+    //Rotate halton values
+    vec2 rotHalton = fract(halton[i] + vec2(RandomFloat01(staticSeed), RandomFloat01(staticSeed)));
+
+    vec2 u = rotHalton;
     float pdf_ratio;
     vec3 H_tangent = SphericalCapBoundedWithPDFRatio(u.yx, V_tangent, vec2(this_s.rou), pdf_ratio);//sampleGGXVNDF(V_tangent, alpha, alpha, u.x, u.y);            
     

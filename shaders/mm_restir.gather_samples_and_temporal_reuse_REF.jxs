@@ -480,7 +480,7 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 	vec4 sample_uv_or_dir;
 	sample test_s;
 
-	if(background(this_s)) return vec4(0.0);
+	//if(background(this_s)) return vec4(0.0);
 
 	//initial selection of 1 sample of M
 	for (int i = 0; i < M; i++)
