@@ -1,7 +1,6 @@
 in jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec2 uvFull;
-	smooth vec3 dir;
 } jit_in;
 
 uniform sampler2DRect colTex, reservoirTex, bestDirTex, norDepthTex, posTex, albTex, occTex;

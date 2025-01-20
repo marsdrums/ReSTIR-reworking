@@ -11,8 +11,8 @@
 	<param name="roughMetalTex" type="int" default="8" />
 	<param name="depthsTex" type="int" default="9" />
 	<param name="prevPosTex" type="int" default="10" />
-	<param name="noiseTex" type="int" default="11" />
-	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="11" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+	//<param name="noiseTex" type="int" default="11" />
+	//<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="11" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
 
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
@@ -46,7 +46,7 @@
 		<bind param="roughMetalTex" program="fp" />
 		<bind param="depthsTex" program="fp" />
 		<bind param="prevPosTex" program="fp" />
-		<bind param="noiseTex" program="fp" />
+		//<bind param="noiseTex" program="fp" />
 		<bind param="prevMVP" program="fp" />
 		<bind param="farClip" program="fp" />
 		<bind param="farClip" program="vp" />

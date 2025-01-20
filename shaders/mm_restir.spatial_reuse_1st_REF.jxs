@@ -4,13 +4,12 @@
 	<param name="p_hatTex" type="int" default="1" filter="nearest" />
 	<param name="colTex" type="int" default="2" filter="nearest" />
 	<param name="norDepthTex" type="int" default="3" filter="nearest" />
-	<param name="velTex" type="int" default="4" filter="nearest" />
-	<param name="posTex" type="int" default="5" filter="nearest" />
-	<param name="albTex" type="int" default="6" filter="nearest" />
-	<param name="environmentMap" type="int" default="7" filter="nearest" />
-	<param name="roughMetalTex" type="int" default="8" filter="nearest" />
-	<param name="stbn_uvec2Tex" type="int" default="9" flter="nearest" />
-	<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="9" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
+	<param name="posTex" type="int" default="4" filter="nearest" />
+	<param name="albTex" type="int" default="5" filter="nearest" />
+	<param name="environmentMap" type="int" default="6" filter="nearest" />
+	<param name="roughMetalTex" type="int" default="7" filter="nearest" />
+	//<param name="stbn_uvec2Tex" type="int" default="8" flter="nearest" />
+	//<texture file="stbn_uvec2_null_scalar_tiled.png" type="float16" unit="8" rectangle="1" filter="nearest nearest" wrap="repeat repeat"/>
 	<param name="texDim" type="vec2" state="TEXDIM0" />
 	<param name="mapSize" type="vec2" state="TEXDIM7" />
 	<param name="prevMVP" type="mat4" state="PREV_MODELVIEW_PROJECTION_MATRIX" />
@@ -33,7 +32,6 @@
 	<language name="glsl" version="1.5">
 		<bind param="colTex" program="fp" />
 		<bind param="norDepthTex" program="fp" />
-		<bind param="velTex" program="fp" />
 		<bind param="texDim" program="fp" />
 		<bind param="mapSize" program="fp" />
 		<bind param="posTex" program="fp" />
@@ -42,7 +40,7 @@
 		<bind param="albTex" program="fp" />
 		<bind param="environmentMap" program="fp" />
 		<bind param="roughMetalTex" program="fp" />
-		<bind param="stbn_uvec2Tex" program="fp" />
+		//<bind param="stbn_uvec2Tex" program="fp" />
 		<bind param="prevMVP" program="fp" />
 		<bind param="farClip" program="fp" />
 
@@ -78,12 +76,6 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -192,7 +184,9 @@ void main(void) {
 
 		vec3 candidatePos = texelFetch(posTex, neiUV).xyz;
 
-		if(	dot(this_s.nor, candidateNor_depth.xyz) < 0.96 || length(this_s.pos - candidatePos) > 0.2 ) continue;
+		vec3 posDiff = this_s.pos - candidatePos;
+
+		if(	dot(this_s.nor, candidateNor_depth.xyz) < 0.95) continue;// ||  dot(posDiff, posDiff) > 0.04 ) continue;
 
 		neighbor_reservoir = texelFetch(reservoirTex, neiUV);
 		neighbor_reservoir.z = min(reservoir.z, neighbor_reservoir.z);

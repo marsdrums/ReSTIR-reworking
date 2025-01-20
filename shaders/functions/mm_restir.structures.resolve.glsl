@@ -1,13 +1,6 @@
 in jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec2 uvFull;
-	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_in;
 
 

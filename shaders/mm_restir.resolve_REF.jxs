@@ -26,7 +26,6 @@
 	<param name="pos" type="vec3" state="POSITION" />
 	<param name="uv" type="vec2" state="TEXCOORD" />
 	<param name="frame" type="int" state="FRAME" />
-	<param name="farCorner" type="vec3" state="FAR_CORNER" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
 
 	<param name="spiralRadius_REF" type="float" default="16" />
@@ -60,7 +59,6 @@
 		<bind param="pos" program="vp" />
 		<bind param="uv" program="vp" />
 		<bind param="frame" program="fp" />
-		<bind param="farCorner" program="vp" />
 		<bind param="eye" program="fp" />
 
 		<bind param="spiralRadius_REF" program="fp" />
@@ -81,13 +79,6 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec2 uvFull;
-	smooth vec3 dir;
-	flat vec4 plane_near;
-	flat vec4 plane_far;
-	flat vec4 plane_left;
-	flat vec4 plane_right;
-	flat vec4 plane_top;
-	flat vec4 plane_bottom;
 } jit_out;
 
 uniform mat4 MVP;
@@ -96,7 +87,6 @@ uniform vec3 farCorner;
 
 void main(void) {
 	gl_Position = MVP*vec4(pos, 1.);
-	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
 	jit_out.uv = vec2(textureMatrix1*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
 	jit_out.uvFull = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
 }
@@ -196,12 +186,12 @@ void main(void) {
 	float weight = 0.0001;
 
 	vec3 invDir;
-	float hitDist = setEnvDist;
+	//float hitDist = setEnvDist;
 	if(reservoir.y > 0){
 		test_s = get_sample_pos_col_full_res(int(reservoir.y), seed);	
-		vec3 sampleDiff = test_s.pos - this_s.pos;
-		hitDist = length(sampleDiff);	
-		invDir = -sampleDiff / hitDist;
+		//vec3 sampleDiff = test_s.pos - this_s.pos;
+		//hitDist = length(sampleDiff);	
+		//invDir = -sampleDiff / hitDist;
 
 	}
 

@@ -90,12 +90,6 @@ uniform mat4 textureMatrix0;
 uniform vec3 farCorner;
 uniform float nearClip, farClip;
 
-vec4 computePlane(vec3 p1, vec3 p2, vec3 p3) {
-    vec3 normal = normalize(cross(p2 - p1, p3 - p1));
-    float D = -dot(normal, p1);
-    return vec4(normal, D);
-}
-
 void main(void) {
 	gl_Position = MVP*vec4(pos, 1.);
 	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
@@ -107,7 +101,6 @@ void main(void) {
 <program name="fp" type="fragment"  >
 <![CDATA[
 #version 330 core
-#define search_radius 100
 
 layout (location = 0) out vec4 outReservoir;
 layout (location = 1) out vec4 outPhat;
@@ -143,7 +136,7 @@ uint get_rng_seed(){
 vec2 get_sample_uv(inout uint seed, in int i){
 
 	//stratified sampling
-	float d = 4;
+	float d = 3;
 	vec2 offset = vec2( mod(float(i),d), floor(float(i)/d) );
 
 	vec2 randUV = vec2(RandomFloat01(seed), RandomFloat01(seed)) / d;
@@ -155,11 +148,11 @@ vec2 get_sample_uv(inout uint seed, in int i){
 vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
 
 	//stratified sampling
-	float offset = float(i)/16;
+	float offset = float(i)/9;
 
 	//generate random unit vector 
 	float z = RandomFloat01(seed) * 2.0f - 1.0f;
-    float a = (RandomFloat01(seed)/16 + offset) * TWOPI;
+    float a = (RandomFloat01(seed)/9 + offset) * TWOPI;
     float r = sqrt(1.0f - z * z);
     float x = r * cos(a);
     float y = r * sin(a);
@@ -295,14 +288,10 @@ vec2 pos2uv(in vec3 p){
 
 vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir){
 
-	//if(background(this_s)) return vec4(0.0);
-
     vec4 reservoir = vec4(0); //curr reservoir
 
-	ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
-
-	int M = 16;//num of from the view port
-	int J = 16;//num of samples from the environment map
+	const int M = 9;//num of from the view port
+	const int J = 9;//num of samples from the environment map
 
 	int sample_index;
 	vec2 sample_uv;
