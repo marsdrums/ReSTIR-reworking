@@ -4,7 +4,7 @@
 		"appversion" : 		{
 			"major" : 9,
 			"minor" : 0,
-			"revision" : 3,
+			"revision" : 5,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
@@ -13,6 +13,65 @@
 		"rect" : [ 78.0, 102.0, 1230.0, 898.0 ],
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
+				"box" : 				{
+					"filename" : "motionblur-hq.jxp",
+					"id" : "obj-201",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "jit_gl_texture", "", "" ],
+					"patching_rect" : [ 93.0, 372.0, 253.0, 22.0 ],
+					"text" : "jit.gl.pass @fxname motionblur-hq @quality hi",
+					"textfile" : 					{
+						"filename" : "motionblur-hq.jxp",
+						"flags" : 0,
+						"embed" : 0,
+						"autowatch" : 1
+					}
+
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "num_samples_3",
+					"id" : "obj-185",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 208.0, 528.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "num_samples_2",
+					"id" : "obj-139",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 208.0, 498.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "num_samples_1",
+					"id" : "obj-107",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 188.0, 464.800006926059723, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-194",
 					"maxclass" : "newobj",
@@ -117,7 +176,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"patching_rect" : [ -242.400003612041473, 693.600010335445404, 50.0, 49.0 ],
-					"text" : "start 4 dozer.mov"
+					"text" : "read 5 chickens.mp4"
 				}
 
 			}
@@ -479,7 +538,7 @@
 						"appversion" : 						{
 							"major" : 9,
 							"minor" : 0,
-							"revision" : 3,
+							"revision" : 5,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
@@ -658,7 +717,7 @@
 
 							}
  ],
-						"originid" : "pat-12"
+						"originid" : "pat-6"
 					}
 ,
 					"patching_rect" : [ 218.0, 1230.0, 41.0, 22.0 ],
@@ -1284,7 +1343,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "jit_gl_texture", "", "" ],
-					"patching_rect" : [ 130.0, 387.0, 342.0, 22.0 ],
+					"patching_rect" : [ 119.600003659725189, 405.60000604391098, 342.0, 22.0 ],
 					"text" : "jit.gl.pass @fxname gamma @color_levels 167000 @quality hi",
 					"textfile" : 					{
 						"filename" : "gamma.jxp",
@@ -1500,8 +1559,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 904.0, 1046.0, 133.0, 22.0 ],
-					"text" : "mat_emission 30 30 30"
+					"patching_rect" : [ 904.0, 1046.0, 113.0, 22.0 ],
+					"text" : "mat_emission 3 3 3"
 				}
 
 			}
@@ -2312,7 +2371,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 3,
 					"outlettype" : [ "jit_gl_texture", "", "" ],
-					"patching_rect" : [ 137.0, 344.0, 189.0, 22.0 ],
+					"patching_rect" : [ 84.5, 344.0, 189.0, 22.0 ],
 					"text" : "jit.gl.pass @fxname gi @quality hi",
 					"textfile" : 					{
 						"filename" : "mm_restir.jxp",
@@ -2499,7 +2558,7 @@
 					"numinlets" : 9,
 					"numoutlets" : 2,
 					"outlettype" : [ "", "" ],
-					"patching_rect" : [ -155.5, 1014.0, 153.0, 22.0 ],
+					"patching_rect" : [ -224.800003349781036, 1010.0, 153.0, 22.0 ],
 					"text" : "jit.gl.mesh @position 0 -1 0"
 				}
 
@@ -2730,7 +2789,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 533.0, 293.0, 150.0, 22.0 ]
+					"patching_rect" : [ 139.0, 423.0, 230.0, 22.0 ]
 				}
 
 			}
@@ -2871,6 +2930,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-6", 0 ],
 					"source" : [ "obj-106", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-8", 0 ],
+					"source" : [ "obj-107", 0 ]
 				}
 
 			}
@@ -3099,6 +3165,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-35", 0 ],
 					"source" : [ "obj-138", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-8", 0 ],
+					"source" : [ "obj-139", 0 ]
 				}
 
 			}
@@ -3508,6 +3581,13 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-8", 0 ],
+					"source" : [ "obj-185", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-8", 0 ],
 					"source" : [ "obj-187", 0 ]
 				}
 
@@ -3648,6 +3728,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-16", 0 ],
 					"source" : [ "obj-200", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-132", 0 ],
+					"source" : [ "obj-201", 1 ]
 				}
 
 			}
@@ -4031,7 +4118,7 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-132", 0 ],
+					"destination" : [ "obj-201", 0 ],
 					"source" : [ "obj-8", 1 ]
 				}
 
@@ -4198,6 +4285,30 @@
 			}
 , 			{
 				"name" : "jit.fx.dimmap.js",
+				"bootpath" : "C74:/packages/Jitter Tools/code/fx/js",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "jit.fx.include.attrs.js",
+				"bootpath" : "C74:/packages/Jitter Tools/code/fx/js",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "jit.fx.include.base.js",
+				"bootpath" : "C74:/packages/Jitter Tools/code/fx/js",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "jit.fx.include.input.js",
+				"bootpath" : "C74:/packages/Jitter Tools/code/fx/js",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "jit.fx.include.js",
 				"bootpath" : "C74:/packages/Jitter Tools/code/fx/js",
 				"type" : "TEXT",
 				"implicit" : 1

@@ -28,6 +28,7 @@
 	<param name="uv" type="vec2" state="TEXCOORD" />
 	<param name="frame" type="int" state="FRAME" />
 	<param name="eye" type="vec3" state="CAMERA_POSITION" />
+	<param name="resolve_DIF_spiral_radius" type="vec2" default="5. 5." />
 	<language name="glsl" version="1.5">
 		<bind param="colTex" program="fp" />
 		<bind param="reservoirTex" program="fp" />
@@ -58,6 +59,7 @@
 		<bind param="uv" program="vp" />
 		<bind param="frame" program="fp" />
 		<bind param="eye" program="fp" />
+		<bind param="resolve_DIF_spiral_radius" program="fp" />
 
 		<include source="c74.noise.funcs.glsl" program="fp" />
 		<include source="mm_restir.structures.resolve.DIF.glsl" program="fp" />
@@ -175,7 +177,7 @@ float saturate(in float x){ return clamp(x, 0, 1); }
 
 void main(void) {
 
-	int randomIndex = int( floor(texelFetch(noiseTex, ivec2( mod(jit_in.uvFull, vec2(128))) ).w * 4) );
+	int randomIndex = 0;//int( floor(texelFetch(noiseTex, ivec2( mod(jit_in.uvFull, vec2(128))) ).w * 4) );
 
 	ivec2 offset[4] = ivec2[](	ivec2(+0, +0),
 								ivec2(+1, +0),
@@ -206,8 +208,8 @@ void main(void) {
 	outColor = vec4(0,0,0,1);
 
 	float occlusion = texture(occTex, disjointUV).r;
-	float radius = mix(1.4142135624, 5, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
-	int NUM_SAMPLES = 4;
+	float radius = mix(resolve_DIF_spiral_radius.x, resolve_DIF_spiral_radius.y, occlusion*occlusion);//max(0.0, occlusion*occlusion*2 - 0.5));
+	int NUM_SAMPLES = 6;//int(mix(2, 10, min(texelFetch(reservoirTex, ivec2(jit_in.uv)).z*0.1, 1.0)));
 	float weight = 0.0001;
 
 	for(int i = 0; i < NUM_SAMPLES; i++){

@@ -49,7 +49,9 @@
 				ivec2 offset[4] = ivec2[](ivec2(0,0), ivec2(1,0), ivec2(0,1), ivec2(1,1));
 				uint seed = uint(frame*10+100) + uint(jit_in.texcoord.x*1002 + 39) + uint(jit_in.texcoord.y*4838 + 239);
 				int randIndex = int(RandomFloat01(seed)*4);
+				//randIndex = 1;//frame % 4;
 				outColor = texelFetch(tex0, ivec2(jit_in.texcoord-0.5)*2 + offset[randIndex]);
+
 			}
 		]]>
 		</program>

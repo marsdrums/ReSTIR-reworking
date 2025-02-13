@@ -85,12 +85,12 @@ void main()
 	//viewNorm *= 1.5;	
 
 	// accumulated occlusion factor
-	#define NUM_BASE_SAMPLES 2
+	#define NUM_BASE_SAMPLES 8
 	float occ = 0;
 	float weight = amnt / NUM_BASE_SAMPLES;
 	for (int i = 0; i < NUM_BASE_SAMPLES; ++i) {
 
-		float tile_select = float(mod(i + frame*NUM_BASE_SAMPLES, 63)) + 1;
+		float tile_select = float(i) + 1.0;//float(mod(i + frame*NUM_BASE_SAMPLES, 63)) + 1;
 		vec2 tile_uv = 128*vec2(mod(tile_select, 8), floor(tile_select*0.125));
 		vec4 rand = texelFetch(tex_rand, ivec2(mod(jit_in.uv, vec2(128)) + tile_uv));
 		rand.xyz = rand.xyz*2 - 1;

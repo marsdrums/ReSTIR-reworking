@@ -6,7 +6,7 @@
             <input source="VELOCITY" type="float16" />
             <input source="ALBEDO" type="char" erase_color="0 0 0 1" />
             <input source="ROUGHMETAL" type="char" erase_color="0 0 0 1" />
-            <input source="DEPTHPEEL" type="float16" dim="960 540"/>
+            <input source="DEPTHPEEL" type="float16" dimscale="0.5 0.5"/>
             <input source="ENVIRONMENT" type="float16" />
         </inputs>
 
@@ -73,16 +73,32 @@
             <input subpass="IMAGE" />
         </subpass>
 
-        <subpass name="OCCLUSION" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
+        <subpass name="OCCLUSION_unclamped" file="mm_restir.ssao.jxs" inputs="3" outputs="1" type="char">
             <input subpass="NORMALS_half"/>
             <input source="DEPTHPEEL" />
             <input subpass="VIEWPOS_half" />
         </subpass>
 
-<!--        <subpass name="OCCLUSION_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="char"> -->
-<!--            <input subpass="dummy_half" /> -->
-<!--            <input subpass="OCCLUSION" /> -->
-<!--        </subpass> -->
+        <subpass name="OCCLUSION" file="mm_restir.clamp_occlusion.jxs" inputs="1" outputs="1" type="char">
+            <input subpass="OCCLUSION_unclamped"/>
+        </subpass>   
+
+        <subpass name="VELOCITY_disocclusion" file="mm_restir.disocclusion.jxs" inputs="4" outputs="2" type="float16">
+            <input source="VELOCITY"/>
+            <input subpass="VIEWPOS" />
+            <input subpass="VIEWPOS_fdbk" history="1" />
+            <input source="NORMALS" />
+        </subpass>
+
+        <subpass name="VIEWPOS_fdbk" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
+            <input subpass="VELOCITY_disocclusion" output="1"/>
+        </subpass> 
+
+        <subpass name="VELOCITY_disocclusion_half" file="mm_downscale.jxs" inputs="2" outputs="1" type="float32">
+            <input subpass="dummy_half" />
+            <input subpass="VELOCITY_disocclusion" output="0"/>
+        </subpass>
+
 
 <!-- ==================== DIFFUSE ========================= -->
 
@@ -95,7 +111,7 @@
             <input subpass="DIF_spatial_2" history="1" output="1" /> 
             <input subpass="ALBEDO_half" />
             <input source="ENVIRONMENT" />
-            <input subpass="VELOCITY_WEIGHT_half" />
+            <input subpass="VELOCITY_disocclusion_half" />
         </subpass>
 
         <subpass name="clamp_reservoir_0" file="mm_restir.clamp_reservoir_weights.jxs" inputs="1" outputs="1" type="float32">
@@ -142,7 +158,7 @@
         <bind name="variance_clipping_gamma_DIF" param="variance_clipping_gamma_DIF" type="float" default="1.5" />
         <subpass name="DIF_filtered" file="mm_restir.temporalFilter_DIF.jxs" inputs="4" outputs="1" type="float16">
             <input subpass="DIF_resolve" />
-            <input subpass="VELOCITY_WEIGHT" />
+            <input subpass="VELOCITY_disocclusion" />
             <input subpass="DIF_filtered_fdbk" history="1" output="0" />
             <input subpass="VELOCITY_ref_WEIGHT" />
         </subpass>
@@ -265,7 +281,8 @@
 
         <subpass name="composite_fdbk" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
             <input subpass="composite" output="1"/>
-        </subpass>     
+        </subpass>    
+
 
         <subpass name="dummyOUT" file="mm_through.jxs" inputs="1" outputs="1" type="float16">
             <input subpass="composite" output="0"/>

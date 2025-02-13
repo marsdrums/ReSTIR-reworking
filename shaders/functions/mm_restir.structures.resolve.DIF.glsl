@@ -10,6 +10,7 @@ uniform vec2 texDim, mapSize;
 uniform mat4 prevMVP, invV, MV, MVP, VP, V, projmat, textureMatrix1;
 uniform float farClip;
 uniform vec3 eye;
+uniform vec2 resolve_DIF_spiral_radius;
 
 struct sample{
 	vec3 col;

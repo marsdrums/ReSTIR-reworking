@@ -50,6 +50,7 @@
 		<bind param="farClip" program="fp" />
 		<bind param="farClip" program="vp" />
 		<bind param="nearClip" program="vp" />
+		<bind param="nearClip" program="fp" />
 
 		<bind param="MVP" program="vp" />
 		<bind param="MVP" program="fp" />
@@ -83,6 +84,10 @@ in vec2 uv;
 out jit_PerVertex {
 	smooth vec2 uv;
 	smooth vec3 dir;
+	flat vec3 U;
+	flat vec3 D;
+	flat vec3 L;
+	flat vec3 R;
 } jit_out;
 
 uniform mat4 MVP;
@@ -94,6 +99,15 @@ void main(void) {
 	gl_Position = MVP*vec4(pos, 1.);
 	jit_out.dir = farCorner * vec3(gl_Position.xy, 1);
 	jit_out.uv = vec2(textureMatrix0*vec4(gl_Position.xy*0.5 + 0.5, 0., 1.));
+
+	vec3 tr = normalize(farCorner);
+	vec3 tl = vec3(-tr.x, tr.y, tr.z);
+	vec3 br = vec3(tr.x, -tr.y, tr.z);
+	vec3 bl = vec3(-tr.x, -tr.y, tr.z);
+	jit_out.U = normalize(cross(tr, tl));
+	jit_out.D = normalize(cross(bl, br));
+	jit_out.L = normalize(cross(tl, bl));
+	jit_out.R = normalize(cross(br, tr));
 
 }
 ]]>
@@ -107,6 +121,7 @@ layout (location = 1) out vec4 outPhat;
 //layout (location = 2) out vec4 outTest;
 
 uniform int enable_temporal_DIF;
+
 
 float packvec3(in vec3 v) 
 {
@@ -133,10 +148,10 @@ uint get_rng_seed(){
 	return uint(jit_in.uv.x*37173) + uint(jit_in.uv.y*28842) + uint(frame*37711);
 }
 
-vec2 get_sample_uv(inout uint seed, in int i){
+vec2 get_sample_uv(inout uint seed, in int i, in int M){
 
 	//stratified sampling
-	float d = 2;
+	float d = sqrt(float(M));
 	vec2 offset = vec2( mod(float(i),d), floor(float(i)/d) );
 
 	vec2 randUV = vec2(RandomFloat01(seed), RandomFloat01(seed)) / d;
@@ -145,14 +160,14 @@ vec2 get_sample_uv(inout uint seed, in int i){
 	return randUV;
 }
 
-vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i){
+vec3 get_canidate_dir(inout uint seed, in vec3 nor, in int i, in int J){
 
 	//stratified sampling
-	float offset = float(i)/4;
+	float offset = float(i)/float(J);
 
 	//generate random unit vector 
 	float z = RandomFloat01(seed) * 2.0f - 1.0f;
-    float a = (RandomFloat01(seed)/4 + offset) * TWOPI;
+    float a = (RandomFloat01(seed)/float(J) + offset) * TWOPI;
     float r = sqrt(1.0f - z * z);
     float x = r * cos(a);
     float y = r * sin(a);
@@ -228,7 +243,9 @@ sample get_sample(int index){
 	vec4 lookup4 = texelFetch(albTex, iuv);
 	s.col = lookup0.rgb;
 	s.nor = lookup1.xyz;
-	s.vel = texelFetch(velTex, iuv).rg;
+	vec3 lookup5 = texelFetch(velTex, iuv).rgb;
+	s.vel = lookup5.xy;
+	s.dis = lookup5.z;
 	s.pos = lookup3.xyz;
 	s.depth = lookup1.w;
 	s.index = index;
@@ -286,37 +303,127 @@ vec2 pos2uv(in vec3 p){
 	return floor( ( textureMatrix0 * vec4(projP.xy,1,1) ).xy ) + 0.5;// * texDim;
 }
 
+vec2 reproject(in vec3 p){
+	vec4 proj = projmat * vec4(p,1);
+	return (texDim-1) * (0.5*proj.xy/proj.w + 0.5);
+}
+
+float rayPlaneIntersectionUD(float t, vec3 ro, vec3 rd){
+
+	vec3 N = rd.y > 0.0 ? jit_in.U : jit_in.D;
+	return min(t, -dot(ro,N) / max(0.05, dot(rd,N)));
+}
+
+float rayPlaneIntersectionLR(float t, vec3 ro, vec3 rd){
+
+	vec3 N = rd.x > 0.0 ? jit_in.R : jit_in.L;
+	return min(t, -dot(ro,N) / max(0.05, dot(rd,N)));
+}
+
+float rayCapsIntersection(float t, vec3 ro, vec3 rd){
+
+	float offset = rd.z > 0 ? nearClip : -farClip;
+	float numerator = -ro.z*sign(rd.z) - offset;
+	return min(t, numerator / max(0.05, rd.z) );
+}
+
+float rayFrustumIntersection(vec3 ro, vec3 rd){
+
+	float t = 999999999;
+
+	//ray intersection with the frustum planes
+	t = rayPlaneIntersectionUD(t, ro, rd);
+	t = rayPlaneIntersectionLR(t, ro, rd);
+
+	//ray intersection with the frustum caps
+	t = rayCapsIntersection(t, ro, rd);
+
+	return t;
+}
+
+bool raytrace_shadow_for_env(vec3 P, vec3 R, inout uint seed, in float coarse_step){
+
+	//Compute reflections
+	vec3 endPos = P + R*rayFrustumIntersection(P, R);
+	vec2 endFrag = reproject(endPos);
+
+	// Use Manhattan distance
+	vec2 fragDist = endFrag - jit_in.uv;
+	float numSteps = abs(fragDist.x) + abs(fragDist.y);
+
+	float step = coarse_step / numSteps;
+	vec2 fragStep = fragDist * step;
+
+	vec2 testFrag = jit_in.uv;
+	float numerator = P.z*endPos.z;
+	float divisor = endPos.z;
+	float divisorStep = (P.z-endPos.z) * step;
+
+	float expectedDepth;
+	vec4 sampledDepth;
+
+	float randomOffset = RandomFloat01(seed)*0.2;
+	testFrag += fragStep*randomOffset;
+	divisor += divisorStep*randomOffset;
+
+	//corase search
+	for( float i = step; i < 1; i +=step ){
+
+		//march on the ray
+		testFrag += fragStep; 
+
+		//couldn't avoid this...
+		if(	testFrag.x < 0.0 || 
+			testFrag.y < 0.0 || 
+			testFrag.x >= texDim.x || 
+			testFrag.y >= texDim.y) return true;
+
+		divisor += divisorStep;
+		expectedDepth = numerator / divisor;
+
+		//fetch depth
+		sampledDepth = texelFetch(depthsTex, ivec2(testFrag));
+
+		if( (sampledDepth.x >= expectedDepth && expectedDepth >= sampledDepth.y) ||
+			(sampledDepth.z >= expectedDepth && expectedDepth >= sampledDepth.w)){
+			return false;
+		}
+	}
+	return true;
+}
+
+
 vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3 best_dir){
 
     vec4 reservoir = vec4(0); //curr reservoir
 
-	const int M = 4;//num of from the view port
-	const int J = 4;//num of samples from the environment map
+	int M = this_s.dis == 0 ? 3 : 6;//num of from the view port
+	int J = this_s.dis == 0 ? 3 : 6;//num of samples from the environment map
 
-	int sample_index;
+	float sample_index;
 	vec2 sample_uv;
 	vec3 candidate_dir;
 
 	//initial selection of 1 sample of M
 	for (int i = M; i > 0; i--)
 	{
-		sample_uv = get_sample_uv(seed, i);
-	    sample_index = int(uv2index(sample_uv));
-	    sample test_s = get_sample_pos_col(sample_index);
+		sample_uv = get_sample_uv(seed, i, M);
+	    sample_index = uv2index(sample_uv);
+	    sample test_s = get_sample_pos_col(int(sample_index));
 	    if(background(test_s)) continue;
 
-		p_hat = dot( vec3(0.333333333, 0.333333333, 0.333333333), get_radiance(this_s, test_s) );
+		p_hat = luminance(get_radiance(this_s, test_s));//dot( vec3(0.333333333, 0.333333333, 0.333333333), get_radiance(this_s, test_s) );
 		p_hat *= M_TAU;//(texDim.x * texDim.y); //Divide by PDF
-	    reservoir = updateReservoir(reservoir, float(sample_index), p_hat, 1, seed, candidate_dir, best_dir);
+	    reservoir = updateReservoir(reservoir, sample_index, p_hat, 1, seed, candidate_dir, best_dir);
 	}
 
 	//sample the environment map
 	for (int k = J; k > 0; k--)
 	{
-		candidate_dir = get_canidate_dir(seed, this_s.nor, k);
+		candidate_dir = get_canidate_dir(seed, this_s.nor, k, J); //the direction is in world space
 	  	sample test_s = get_environment_sample(candidate_dir);
 
-		p_hat = dot( vec3(0.333333333, 0.333333333, 0.333333333), get_radiance_for_env(this_s, test_s) );
+		p_hat = luminance(get_radiance_for_env(this_s, test_s));//dot( vec3(0.333333333, 0.333333333, 0.333333333), get_radiance_for_env(this_s, test_s) );
 		p_hat *= M_TAU; //Divide by PDF
 	    reservoir = updateReservoir(reservoir, -1, p_hat, 1, seed, candidate_dir, best_dir);
 	}
@@ -328,16 +435,16 @@ vec4 gather_samples(in sample this_s, inout uint seed, out float p_hat, out vec3
 
 		sample test_s = get_sample(int(reservoir.y));
 		p_hat = shadowRay(this_s, test_s, seed) ? luminance( get_radiance(this_s, test_s) ) : 0.0;
-		reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-		return reservoir;
 
 	} else { //if it's a sample from the environment map
 
 		sample test_s = get_environment_sample(best_dir);
-		p_hat = shadowRayForEnv(this_s, test_s) ? luminance( get_radiance_for_env(this_s, test_s) ) : 0.0;
-		reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
-		return reservoir;
+		//p_hat = shadowRayForEnv(this_s, test_s) ? luminance( get_radiance_for_env(this_s, test_s) ) : 0.0;
+		p_hat = raytrace_shadow_for_env(this_s.pos, test_s.nor, seed, 35) ? luminance( get_radiance_for_env(this_s, test_s) ) : 0.0;
 	}
+	
+	reservoir.w = p_hat > 0.0 ? reservoir.x / max(0.0001, p_hat*reservoir.z) : 0.0;
+	return reservoir;
 }
 
 
@@ -364,7 +471,7 @@ void main(void) {
 
 		ivec2 reprojected_uv = ivec2(this_s.uv - this_s.vel*texDim );
 
-		if( valid_uv(vec2(reprojected_uv)) ){
+		if( valid_uv(vec2(reprojected_uv)) && this_s.dis == 0.0){
 
 			vec4 prev_reservoir = texelFetch(prev_reservoirTex, reprojected_uv);
 			vec4 temporal_reservoir = vec4(0);
@@ -386,7 +493,8 @@ void main(void) {
 					prev_reservoir.y = float(uv2index(prev_best_wpos_uv));
 					test_s = get_sample(int(prev_reservoir.y));
 
-					bool visible = frame % 3 == 0 ? shadowRay(this_s, test_s, seed) : true;
+					//bool visible = frame % 3 == 0 ? shadowRay(this_s, test_s, seed) : true;
+					bool visible = shadowRay(this_s, test_s, seed);
 					p_hat =  visible && !background(test_s)? 
 							luminance( get_radiance(this_s, test_s) ) :
 							0.0;
@@ -402,7 +510,9 @@ void main(void) {
 				//prev_reservoir.y = float(uv2index_for_env(prev_best_wpos_uv));
 				test_s = get_environment_sample(prev_best_dir);
 
-				bool visible = frame % 3 == 0 ? shadowRayForEnv(this_s, test_s) : true;
+				//bool visible = shadowRayForEnv(this_s, test_s);//frame % 3 == 0 ? shadowRayForEnv(this_s, test_s) : true;
+				bool visible = frame % 3 == 0 || this_s.dis == 1 ? raytrace_shadow_for_env(this_s.pos, test_s.nor, seed, 80) : true;
+				//bool visible = raytrace_shadow_for_env(this_s.pos, test_s.nor, seed, 80);
 				p_hat = visible ? 
 						luminance( get_radiance_for_env(this_s, test_s) ) :
 						0.0;
@@ -425,8 +535,8 @@ void main(void) {
 			temporal_reservoir.w = p_hat > 0.0 ? temporal_reservoir.x / max(0.0001, p_hat*temporal_reservoir.z) : 0.0;
 			reservoir = temporal_reservoir;	
 		}
-		//___________________________________________________________________________________________________________________________________________________________
 	}
+	//___________________________________________________________________________________________________________________________________________________________
 
 	
 	outReservoir = reservoir;

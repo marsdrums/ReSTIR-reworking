@@ -152,13 +152,15 @@ vec4 applyTemporalFilter(in curr c){
 	p.col = texture(accumTex, c.repUV).rgb;
 	p.col = clamp(p.col, BoxMin, BoxMax);
 
+	//return vec4(p.col, 1.0);//vec4( mix( p.col, c.col, c.weight ), 1.0);
+	//return vec4( mix( p.col, c.col, c.weight ), 1.0);
 	return vec4( mix( p.col, c.col, c.weight ), 1.0);
 }
 
 void main(void) {
 
 	curr c = read_current_textures();
-	outCol = valid_reprojection(c.repUV) ? applyTemporalFilter(c) : vec4(c.col, 1.0);
+	outCol = valid_reprojection(c.repUV) && c.weight == 0.0 ? applyTemporalFilter(c) : vec4(c.col, 1.0);
 /*
     // Find out where the current pixel was in the previous frame and
     // get the colour at that location.
@@ -187,6 +189,31 @@ void main(void) {
     
     outCol.rgb = mix(colorOld, c.col, 0.1);
     outCol.a = 1.0;
+*/
+/*
+	vec3 FinalColor = texelFetch(imgTex, ivec2(jit_in.uv)).rgb;
+    if (valid_reprojection(c.repUV) && c.weight == 0) {
+        //Valid reprojection
+        vec4 LFinalColor = texture(accumTex, c.repUV);
+
+        //Clamping
+        vec3 FMIN = vec3(1000.);
+        vec3 FMAX = vec3(0.);
+        for (float x=-1.; x<1.5; x+=1.) {
+            for (float y=-1.; y<1.5; y+=1.) {
+                vec3 Sample = texture(imgTex,(jit_in.uv+vec2(x,y))).xyz;
+                //Clamp
+                FMIN = min(FMIN,Sample);
+                FMAX = max(FMAX,Sample);
+            }
+        }
+        LFinalColor.xyz = clamp(LFinalColor.xyz,FMIN,FMAX);
+        //Output
+        outCol = vec4((FinalColor+LFinalColor.xyz*LFinalColor.w)/(LFinalColor.w+1.),min(31.,LFinalColor.w+1.));
+    } else {
+        //Invalid reprojection
+        outCol = vec4(FinalColor,1.);
+    }
 */
 }
 ]]>
